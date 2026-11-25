@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light"><title>Узловой анализ · Well Model Builder</title>
+  <link rel="icon" href="data:,"><link rel="stylesheet" href="style.css"><link rel="stylesheet" href="dashboard.css">
+  <script type="module" src="dashboard.js"></script>
+</head>
+<body class="dashboard">
+  <header class="masthead"><div class="wrap masthead-inner">
+    <div class="brand"><span class="brand-mark" aria-hidden="true"><i></i><i></i><i></i></span>Well Model Builder</div>
+    <nav aria-label="Разделы"><a href="./" aria-current="page">Расчёт</a><a href="services.html">Сервисы</a></nav>
+  </div></header>
+  <main class="wrap">
+    <div class="intro"><h1>Узловой анализ</h1><p>Модель притока и подъёма жидкости в скважине</p></div>
+    <noscript>Для расчёта включите JavaScript в браузере.</noscript>
+    <div class="workspace">
+      <form id="parameters" novalidate class="panel">
+        <div class="panel-head"><h2>Параметры модели</h2></div>
+        <details class="group" open><summary>Режим скважины</summary><div class="fields"><label>Устьевое давление<span class="field"><input type="number" step="any" name="well.p_wh" required value="10"><small>атм</small></span></label>
+<label>Пластовое давление<span class="field"><input type="number" step="any" name="reservoir.p_res" required value="200"><small>атм</small></span></label>
+<label>Обводнённость<span class="field"><input type="number" step="any" name="pvt.wct" required value="50"><small>%</small></span></label>
+<label>Продуктивность<span class="field"><input type="number" step="any" name="reservoir.pi" required value="1"><small>м³/(сут·атм)</small></span></label>
+<label>Давление насыщения IPR<span class="field"><input type="number" step="any" name="reservoir.pb" required value="150"><small>атм</small></span></label></div></details>
+<details class="group" ><summary>Ствол и инклинометрия</summary><div class="fields"><label>Глубина пласта по стволу<span class="field"><input type="number" step="any" name="well.h_res" required value="1500"><small>м</small></span></label>
+<label>Глубина спуска НКТ<span class="field"><input type="number" step="any" name="well.tubing.h_mes" required value="1000"><small>м</small></span></label>
+<label>Внутренний диаметр ЭК<span class="field"><input type="number" step="any" name="well.casing.d" required value="0.1"><small>м</small></span></label>
+<label>Внутренний диаметр НКТ<span class="field"><input type="number" step="any" name="well.tubing.d" required value="0.062"><small>м</small></span></label>
+<label>Геотермический градиент<span class="field"><input type="number" step="any" name="well.geo_grad" required value="3"><small>°C/100 м</small></span></label>
+<label>Относительная шероховатость<span class="field"><input type="number" step="any" name="well.roughness" required value="0.0001"><small>доля</small></span></label>
+<label class="wide">Глубины по стволу · MD<span class="field"><input name="well.inclinometry.MD" required value="0 1000 1500" aria-describedby="survey-help" spellcheck="false"><small>м</small></span></label>
+<label class="wide">Вертикальные глубины · TVD<span class="field"><input name="well.inclinometry.TVD" required value="0 1000 1100" aria-describedby="survey-help" spellcheck="false"><small>м</small></span></label><p class="wide help" id="survey-help">Введите глубины через пробел в порядке замеров. Десятичный разделитель — точка.</p></div></details>
+<details class="group" ><summary>Свойства флюида · PVT</summary><div class="fields"><label>Газовый фактор<span class="field"><input type="number" step="any" name="pvt.rp" required value="100"><small>ст. м³/т</small></span></label>
+<label>Пластовая температура<span class="field"><input type="number" step="any" name="pvt.t_res" required value="90"><small>°C</small></span></label>
+<label>Плотность нефти по воде<span class="field"><input type="number" step="any" name="pvt.gamma_oil" required value="0.8"><small>доля</small></span></label>
+<label>Плотность газа по воздуху<span class="field"><input type="number" step="any" name="pvt.gamma_gas" required value="0.7"><small>доля</small></span></label>
+<label>Относительная плотность воды<span class="field"><input type="number" step="any" name="pvt.gamma_wat" required value="1.0"><small>доля</small></span></label></div></details>
+<details class="group" ><summary>Сетка расчёта</summary><div class="fields"><label>Максимальный дебит VLP<span class="field"><input type="number" step="any" name="sampling.q_max" required value="400"><small>м³/сут</small></span></label>
+<label>Число точек IPR<span class="field"><input type="number" step="any" name="sampling.ipr_points" required value="21"><small>шт.</small></span></label>
+<label>Число точек VLP<span class="field"><input type="number" step="any" name="sampling.vlp_points" required value="21"><small>шт.</small></span></label></div></details>
+        <div class="actions"><button type="submit" id="calculate">Рассчитать</button><button type="reset" class="secondary">Вернуть пример</button></div>
+      </form>
+      <section class="panel result" aria-labelledby="chart-heading">
+        <div class="panel-head"><h2 id="chart-heading">Кривые IPR и VLP</h2></div>
+        <div class="legend"><span class="ipr-key">IPR · приток</span><span class="vlp-key">VLP · подъём</span><span class="point-key">Рабочая точка</span></div>
+        <div id="plot"><svg id="chart" role="img" aria-label="Кривые притока и подъёма жидкости с рабочей точкой" hidden></svg>
+          <p id="empty">Запустите расчёт для построения графика.</p></div>
+        <div class="metrics"><div><h3>Дебит жидкости</h3><strong id="flow">—</strong> <span>м³/сут</span></div>
+          <div><h3>Забойное давление</h3><strong id="pressure">—</strong> <span>атм</span></div></div>
+        <p id="status" role="status" aria-live="polite">Загружены параметры примера.</p>
+      </section>
+    </div>
+  </main>
+</body></html>

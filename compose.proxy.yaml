@@ -1,0 +1,12 @@
+services:
+  nginx:
+    networks:
+      app_internal: {}
+      public_proxy:
+        aliases:
+          - well-model-builder
+
+networks:
+  public_proxy:
+    external: true
+    name: ${PROXY_NETWORK:-public_proxy}

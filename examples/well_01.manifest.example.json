@@ -1,0 +1,6 @@
+{
+  "ipr": {"request": "ipr_request.json", "expected": "ipr_response.json"},
+  "vlp": {"request": "vlp_request.json", "expected": "vlp_response.json"},
+  "nodal": {"request": "nodal_request.json", "expected": "nodal_response.json"},
+  "e2e": {"expected": "e2e_point.json"}
+}

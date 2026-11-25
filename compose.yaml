@@ -1,0 +1,84 @@
+name: ${COMPOSE_PROJECT_NAME:-well-model-builder}
+
+x-api: &api
+  image: well-model-builder-api:${IMAGE_TAG:-local}
+  build:
+    context: .
+    target: api
+  init: true
+  restart: unless-stopped
+  security_opt:
+    - no-new-privileges:true
+  networks:
+    - app_internal
+
+services:
+  ipr:
+    <<: *api
+    command: ["python", "-m", "uvicorn", "services.ipr.main:app", "--host", "0.0.0.0", "--port", "8003"]
+    expose: ["8003"]
+    environment:
+      HEALTH_URL: http://127.0.0.1:8003/ipr/health
+      DOCS_PREFIX: /ipr
+
+  vlp:
+    <<: *api
+    command: ["python", "-m", "uvicorn", "services.vlp.main:app", "--host", "0.0.0.0", "--port", "8002"]
+    expose: ["8002"]
+    environment:
+      HEALTH_URL: http://127.0.0.1:8002/vlp/health
+      DOCS_PREFIX: /vlp
+
+  nodal:
+    <<: *api
+    command: ["python", "-m", "uvicorn", "services.nodal.main:app", "--host", "0.0.0.0", "--port", "8004"]
+    expose: ["8004"]
+    environment:
+      HEALTH_URL: http://127.0.0.1:8004/nodal/health
+      DOCS_PREFIX: /nodal
+
+  backend:
+    <<: *api
+    profiles: ["app"]
+    command: ["python", "-m", "uvicorn", "services.backend.main:app", "--host", "0.0.0.0", "--port", "8080"]
+    expose: ["8080"]
+    environment:
+      HEALTH_URL: http://127.0.0.1:8080/health
+      DOCS_PREFIX: /backend
+      IPR_URL: ${IPR_URL:-http://ipr:8003}
+      VLP_URL: ${VLP_URL:-http://vlp:8002}
+      NODAL_URL: ${NODAL_URL:-http://nodal:8004}
+      FRONTEND_ORIGINS: ${FRONTEND_ORIGINS:-http://localhost:3000,http://127.0.0.1:3000,http://[::1]:3000}
+    depends_on:
+      ipr: {condition: service_healthy}
+      vlp: {condition: service_healthy}
+      nodal: {condition: service_healthy}
+
+  nginx:
+    image: well-model-builder-nginx:${IMAGE_TAG:-local}
+    build:
+      context: .
+      target: nginx
+    profiles: ["app"]
+    init: true
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    expose: ["80"]
+    depends_on:
+      backend: {condition: service_healthy}
+      ipr: {condition: service_healthy}
+      vlp: {condition: service_healthy}
+      nodal: {condition: service_healthy}
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1/nginx-health || exit 1"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 5s
+    networks:
+      app_internal: {}
+
+networks:
+  app_internal:
+    internal: true
