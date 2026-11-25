@@ -2,7 +2,7 @@ import asyncio
 import json
 import os
 from pathlib import Path
-from typing import Annotated, Literal
+from typing import Annotated, Literal, TypeVar
 
 import httpx
 from fastapi import Body, HTTPException
@@ -62,7 +62,10 @@ BACKEND_ERRORS = {
 }
 
 
-async def post_calculation[T](
+T = TypeVar("T")
+
+
+async def post_calculation(
     client: httpx.AsyncClient, name: str, payload: dict, schema: TypeAdapter[T],
 ) -> T:
     url = f"{SERVICE_URLS[name].rstrip('/')}/{name}/calc"

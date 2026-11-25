@@ -2,19 +2,19 @@
 
 Версия с формулами базы знаний, на основе этапа 08 хакатона «Разработка системы модели скважины». Дашборд строит IPR и VLP и показывает рабочую точку. Автотесты проверяют расчётные сервисы по отдельности и весь путь от параметров скважины до ответа backend.
 
-Для запуска сайта через Nginx см. [Запуск в Docker](#запуск-в-docker-через-nginx).
+Для запуска сайта через Nginx см. [Запуск в Docker](#запуск-в-docker-через-nginx). Если на сервере нет Docker/Podman, используйте [нативный запуск через Python venv](#запуск-без-docker-и-podman-через-python-venv).
 
 ## Проверка точности
 
-Из корня распакованного проекта выполните в PowerShell с Python 3.12:
+Из корня распакованного проекта выполните в PowerShell с Python 3.11 или новее:
 
 ```powershell
-py -3.12 -m venv .venv
+py -3 -m venv .venv
 .\.venv\Scripts\python.exe -m pip install -r requirements.lock
 .\.venv\Scripts\python.exe -m scripts.verify_accuracy
 ```
 
-Если окружение проекта уже готово, достаточно последней команды. Для Linux или macOS используйте `python3.12` и `.venv/bin/python`. Команда запускает unittest, поднимает отдельные процессы IPR, VLP, Nodal и backend на свободных локальных портах, ждёт health, отправляет реальные HTTP-запросы, записывает [таблицу проверки](accuracy-report.md) и останавливает процессы. Можно оставить дашборд открытым. Код завершения 0 означает, что все запрошенные проверки пройдены. Код 1 и строки FAIL указывают на ошибку.
+Если окружение проекта уже готово, достаточно последней команды. Для Linux или macOS используйте `python3` и `.venv/bin/python` (Python 3.11 или новее). Команда запускает unittest, поднимает отдельные процессы IPR, VLP, Nodal и backend на свободных локальных портах, ждёт health, отправляет реальные HTTP-запросы, записывает [таблицу проверки](accuracy-report.md) и останавливает процессы. Можно оставить дашборд открытым. Код завершения 0 означает, что все запрошенные проверки пройдены. Код 1 и строки FAIL указывают на ошибку.
 
 На Python 3.12.14 прошли 58 автотестов. Отчёт содержит 129 успешных строк с учётом аналитических и HTTP-проверок. В том числе по архиву well_01 сверены 88 чисел. [Сравнение исходной и обновлённой моделей](docs/well_01_comparison.md).
 
@@ -26,7 +26,7 @@ py -3.12 -m venv .venv
 
 ## Проверка дашборда
 
-На Windows запустите команду из корня проекта с установленным окружением Python 3.12. Для новой папки сначала выполните команды создания окружения и установки из раздела «Запуск на Windows без Docker».
+На Windows запустите команду из корня проекта с установленным окружением Python 3.11 или новее. Для новой папки сначала выполните команды создания окружения и установки из раздела «Запуск без Docker и Podman через Python venv».
 
 ```powershell
 .\.venv\Scripts\python.exe scripts/run_local.py --backend-port 18080
@@ -56,7 +56,7 @@ py -3.12 -m venv .venv
 
 ## Быстрая проверка общего расчёта
 
-На Windows запустите из корня проекта `scripts/run_local.py` в окружении Python 3.12. Для первой установки выполните команды из раздела «Запуск на Windows без Docker».
+На Windows запустите из корня проекта `scripts/run_local.py` в окружении Python 3.11 или новее. Для первой установки выполните команды из раздела «Запуск без Docker и Podman через Python venv».
 
 ```powershell
 .\.venv\Scripts\python.exe scripts/run_local.py
@@ -97,7 +97,7 @@ curl.exe -H "Content-Type: application/json" --data-binary "@examples/calculate.
 
 ## Быстрая проверка Nodal
 
-В PowerShell откройте корень распакованного проекта. Если окружение ещё не создано, выполните команды установки из раздела «Запуск на Windows без Docker». Для отдельного запуска Nodal выполните команду:
+В PowerShell откройте корень распакованного проекта. Если окружение ещё не создано, выполните команды установки из раздела «Запуск без Docker и Podman через Python venv». Для отдельного запуска Nodal выполните команду:
 
 ```powershell
 .\.venv\Scripts\python.exe -m uvicorn services.nodal.main:app --port 8004
@@ -123,7 +123,7 @@ curl.exe -i -H "Content-Type: application/json" --data-binary "@examples/nodal.j
 
 ## Быстрая проверка VLP
 
-В PowerShell из корня распакованного проекта запустите VLP. Команда предполагает установленное окружение проекта. Для первой установки см. «Запуск на Windows без Docker».
+В PowerShell из корня распакованного проекта запустите VLP. Команда предполагает установленное окружение проекта. Для первой установки см. «Запуск без Docker и Podman через Python venv».
 
 ```powershell
 .\.venv\Scripts\python.exe -m uvicorn services.vlp.main:app --port 8002
@@ -156,7 +156,7 @@ $r | ConvertTo-Json -Compress
 
 ## Быстрая проверка PVT
 
-Из корня распакованного проекта выполните в PowerShell команды для установленного окружения проекта. На новой машине сначала установите зависимости по разделу «Запуск на Windows без Docker».
+Из корня распакованного проекта выполните в PowerShell команды для установленного окружения проекта. На новой машине сначала установите зависимости по разделу «Запуск без Docker и Podman через Python venv».
 
 ```powershell
 .\.venv\Scripts\python.exe -m scripts.pvt_example
@@ -388,24 +388,135 @@ Python 3.12.14, команда `python -m unittest discover -s tests -v` — 47 
 
 </details>
 
-## Запуск на Windows без Docker
+## Запуск без Docker и Podman через Python venv
 
-Понадобится Python 3.12 с доступом к PyPI для установки зависимостей. Для статического frontend достаточно браузера. Команды выполняются в PowerShell из корня проекта.
+Этот вариант запускает все компоненты непосредственно на хосте: три расчётных API, backend и веб-интерфейс. Docker, Podman, Nginx и база данных для проекта не требуются. Нужен **Python 3.11 или новее** и доступ к PyPI на время установки пакетов. Зависимости приложения закреплены в lock-файле; этот диапазон поддерживают используемые версии NumPy и SciPy.
+
+Сначала распакуйте архив и перейдите в каталог `Well` — туда, где находятся `requirements.lock` и `scripts/`. Все команды ниже нужно выполнять из этого каталога.
+
+### Windows (PowerShell)
+
+Убедитесь, что Python 3.11 или новее доступен через Python Launcher:
 
 ```powershell
-py -3.12 -m venv .venv
+py -3 --version
+py -3 -m venv .venv
+.\.venv\Scripts\python.exe -m pip install --upgrade pip
+.\.venv\Scripts\python.exe -m pip install -r requirements.lock
+```
+
+Для запуска тестов дополнительно установите зависимости разработки:
+
+```powershell
 .\.venv\Scripts\python.exe -m pip install -r requirements-dev.lock
 .\.venv\Scripts\python.exe -m pytest -q
+```
+
+### Linux и macOS (Bash/Zsh)
+
+Убедитесь, что `python3 --version` показывает Python 3.11 или новее. Debian 12 со штатным Python 3.11 подходит. На минимальных Linux-образах модуль `venv` может устанавливаться отдельно. В Debian/Ubuntu выполните `sudo apt update && sudo apt install python3-venv`, если `python3 -m venv` сообщает об отсутствии модуля.
+
+```bash
+python3 --version
+python3 -m venv .venv
+.venv/bin/python -m pip install --upgrade pip
+.venv/bin/python -m pip install -r requirements.lock
+```
+
+Для тестов:
+
+```bash
+.venv/bin/python -m pip install -r requirements-dev.lock
+.venv/bin/python -m pytest -q
+```
+
+Команды установки одинаковы для Linux и macOS. Виртуальное окружение не нужно активировать: вызов Python по пути внутри `.venv` исключает зависимость от оболочки и политики активации PowerShell. При желании окружение можно активировать обычным способом: `.\.venv\Scripts\Activate.ps1` в PowerShell или `source .venv/bin/activate` в Bash/Zsh.
+
+### Запуск и проверка
+
+Запустите полный проект из корня распакованной папки. Окно терминала должно оставаться открытым:
+
+**Windows:**
+
+```powershell
 .\.venv\Scripts\python.exe scripts/run_local.py
 ```
 
-Оставьте окно с сервисами открытым. Во втором окне PowerShell перейдите в тот же каталог и выполните проверку.
+**Linux/macOS:**
+
+```bash
+.venv/bin/python scripts/run_local.py
+```
+
+Откройте `http://127.0.0.1:3000/` — это главная страница. Страница состояния находится по адресу `http://127.0.0.1:3000/services.html`, Swagger backend — `http://127.0.0.1:8080/docs`.
+
+Для проверки из второго окна терминала запустите:
+
+**Windows:**
 
 ```powershell
 .\.venv\Scripts\python.exe scripts/smoke.py
+.\.venv\Scripts\python.exe -m unittest discover -s tests -q
 ```
 
-Для трёх сервисов укажите `--core` в командах запуска и проверки. Ctrl+C в первом окне останавливает дочерние процессы. На Linux и macOS используйте `python3.12 -m venv .venv` и `.venv/bin/python` вместо пути Windows. При нативном запуске Swagger UI загружает JS и CSS с CDN. Схемы `/openapi.json`, страница состояния и HTTP-маршруты доступны локально.
+**Linux/macOS:**
+
+```bash
+.venv/bin/python scripts/smoke.py
+.venv/bin/python -m unittest discover -s tests -q
+```
+
+Успешная команда `smoke.py` проверяет доступность frontend, health всех API, Swagger/OpenAPI и совпадение общего расчёта с прямыми вызовами IPR, VLP и Nodal. Для запуска только расчётных сервисов добавьте `--core` одновременно к `scripts/run_local.py` и `scripts/smoke.py --core`. Остановить запущенные сервисы можно сочетанием `Ctrl+C` в первом окне. При нативном запуске Swagger UI получает JS/CSS с CDN `jsdelivr.net`; если CDN недоступен, интерактивная страница `/docs` может не отобразиться, но API и `/openapi.json` продолжат работать. В Docker-образе Swagger UI поставляется локально.
+
+### Запуск на удалённом сервере
+
+По умолчанию сервисы слушают только `127.0.0.1`, поэтому доступны лишь с самого сервера. Чтобы открыть веб-интерфейс по IP или имени сервера, укажите `--host 0.0.0.0` и добавьте origin страницы в CORS. Например, для сервера с адресом `192.0.2.10`:
+
+**Linux/macOS:**
+
+```bash
+.venv/bin/python scripts/run_local.py --host 0.0.0.0 --frontend-origin http://192.0.2.10:3000
+```
+
+**Windows:**
+
+```powershell
+.\.venv\Scripts\python.exe scripts/run_local.py --host 0.0.0.0 --frontend-origin http://192.0.2.10:3000
+```
+
+Замените `192.0.2.10` на IP или доменное имя сервера. Для другого origin можно повторить `--frontend-origin`, например при нескольких доменах. После запуска откройте `http://192.0.2.10:3000/`.
+
+В нативном режиме браузер обращается к компонентам напрямую, поэтому с клиентской машины должны быть доступны TCP-порты **3000, 8002, 8003, 8004 и 8080**. Ограничьте доступ к ним правилами firewall только доверенными адресами. `0.0.0.0` открывает все эти сервисы на сетевых интерфейсах сервера. Не публикуйте их напрямую в открытый Интернет: нативный режим работает по HTTP; для публичного доступа используйте Docker-вариант с Nginx или отдельно настройте reverse proxy с TLS и маршрутами ко всем пяти портам. Для локального доступа оставляйте значение `127.0.0.1` по умолчанию.
+
+При необходимости изменить порт backend используйте `--backend-port 18080`. Frontend автоматически получит этот порт через `backend-port.js`; при этом порт 3000 и порты расчётных API остаются прежними. Для постоянной работы на Linux используйте менеджер служб, например systemd. Создайте `/etc/systemd/system/well-model-builder.service` и замените имя пользователя и путь к проекту на свои:
+
+```ini
+[Unit]
+Description=Well Model Builder
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=YOUR_LINUX_USER
+WorkingDirectory=/opt/Well
+ExecStart=/opt/Well/.venv/bin/python /opt/Well/scripts/run_local.py --host 127.0.0.1
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
+```
+
+Затем включите службу:
+
+```bash
+sudo systemctl daemon-reload
+sudo systemctl enable --now well-model-builder
+sudo systemctl status well-model-builder
+```
+
+Логи смотрите командой `journalctl -u well-model-builder -f`. Для доступа по сети добавьте к `ExecStart` параметры `--host 0.0.0.0 --frontend-origin http://SERVER_IP:3000` и настройте firewall согласно предупреждению выше.
 
 ## Структура для продолжения разработки
 
