@@ -36,14 +36,13 @@ def fetch(url: str, media_type: str, payload: dict | None = None) -> str:
             time.sleep(0.3)
 
 
-def check_calculation(base: str, compose: bool) -> None:
+def check_calculation(base: str, service_bases: dict[str, str]) -> None:
     sample_path = Path(__file__).resolve().parents[1] / "examples" / "calculate.json"
     sample = json.loads(sample_path.read_text(encoding="utf-8"))
     result = json.loads(fetch(base + "/api/calculate", "application/json", sample))
 
     def direct(name: str, payload: dict):
-        host = name if compose else "127.0.0.1"
-        url = f"http://{host}:{PORTS[name]}/{name}/calc"
+        url = f"{service_bases[name]}/{name}/calc"
         return json.loads(fetch(url, "application/json", payload))
 
     sampling = sample["sampling"]
@@ -57,18 +56,27 @@ def check_calculation(base: str, compose: bool) -> None:
     print(f"OK  Backend  обе кривые и точка совпали: q_liq={points[0]['q_liq']:.5f}, p_wf={points[0]['p_wf']:.5f}")
 
 
-def check(core_only: bool, compose: bool, backend_port: int = 8080) -> None:
-    services = ["ipr", "vlp", "nodal"] if core_only else (
-        ["ipr", "vlp", "nodal", "backend"] if compose else list(PORTS)
-    )
+def check(core_only: bool, compose: bool, backend_port: int = 8080, gateway: str | None = None) -> None:
+    services = ["ipr", "vlp", "nodal"] if core_only else list(PORTS)
+    if compose and not core_only:
+        gateway = "http://nginx"
+    service_bases = {}
     for name in services:
         host = name if compose else "127.0.0.1"
         port = backend_port if name == "backend" else PORTS[name]
-        base = f"http://{host}:{port}"
+        service_bases[name] = gateway or f"http://{host}:{port}"
+    for name, base in service_bases.items():
         if name == "frontend":
             config = fetch(f"{base}/backend-port.js", "text/javascript")
-            if "export const backendPort" not in config or "export function backendUrl" not in config:
-                raise ValueError(f"{base}/: frontend не содержит helper backendUrl")
+            expected_port = "null" if gateway else str(backend_port)
+            if f"export const backendPort = {expected_port};" not in config.splitlines():
+                raise ValueError(f"{base}/: frontend настроен на другой порт backend")
+            if gateway:
+                fetch(f"{base}/services.html", "text/html")
+                for script in ("service-url", "dashboard", "app", "chart"):
+                    fetch(f"{base}/{script}.js", "text/javascript")
+                fetch(f"{base}/_swagger/swagger-ui.css", "text/css")
+                fetch(f"{base}/_swagger/swagger-ui-bundle.js", "text/javascript")
             html = fetch(f"{base}/", "text/html")
             if "Well Model Builder" not in html:
                 raise ValueError(f"{base}/: неожиданная главная страница")
@@ -77,12 +85,13 @@ def check(core_only: bool, compose: bool, backend_port: int = 8080) -> None:
         path = "/health" if name == "backend" else f"/{name}/health"
         if json.loads(fetch(base + path, "application/json")) != {"status": "ok", "service": name}:
             raise ValueError(f"{base}{path}: неожиданный ответ health")
-        schema = json.loads(fetch(f"{base}/openapi.json", "application/json"))
+        docs_base = f"{base}/{name}" if gateway and name != "backend" else base
+        schema = json.loads(fetch(f"{docs_base}/openapi.json", "application/json"))
         calc_path = "/api/calculate" if name == "backend" else f"/{name}/calc"
         if "post" not in schema["paths"].get(calc_path, {}):
-            raise ValueError(f"{base}/openapi.json: отсутствует POST {calc_path}")
-        if "SwaggerUIBundle" not in fetch(f"{base}/docs", "text/html"):
-            raise ValueError(f"{base}/docs: страница Swagger UI не найдена")
+            raise ValueError(f"{docs_base}/openapi.json: отсутствует POST {calc_path}")
+        if "SwaggerUIBundle" not in fetch(f"{docs_base}/docs", "text/html"):
+            raise ValueError(f"{docs_base}/docs: страница Swagger UI не найдена")
         if name == "ipr":
             sample = {"p_res": 200, "wct": 100, "pi": 1, "pb": 150, "points": 2}
             curve = json.loads(fetch(base + calc_path, "application/json", sample))
@@ -107,97 +116,19 @@ def check(core_only: bool, compose: bool, backend_port: int = 8080) -> None:
             statuses = json.loads(fetch(f"{base}/api/services/health", "application/json"))
             if statuses != {"ipr": "ok", "vlp": "ok", "nodal": "ok"}:
                 raise ValueError(f"Связь backend с сервисами: {statuses}")
-            check_calculation(base, compose)
-        print(f"OK  {name:8} {base}{path}  /docs  /openapi.json")
-
-
-def check_proxy(base: str) -> None:
-    """Проверить единый Nginx entrypoint без прямой публикации внутренних портов."""
-    base = base.rstrip("/")
-    routes = [
-        ("/", "text/html"),
-        ("/services.html", "text/html"),
-        ("/nginx-health", "text/plain"),
-        ("/health", "application/json"),
-        ("/backend/health", "application/json"),
-        ("/backend/docs", "text/html"),
-        ("/backend/openapi.json", "application/json"),
-        ("/ipr/health", "application/json"),
-        ("/ipr/docs", "text/html"),
-        ("/ipr/openapi.json", "application/json"),
-        ("/vlp/health", "application/json"),
-        ("/vlp/docs", "text/html"),
-        ("/vlp/openapi.json", "application/json"),
-        ("/nodal/health", "application/json"),
-        ("/nodal/docs", "text/html"),
-        ("/nodal/openapi.json", "application/json"),
-    ]
-    # API images bundle Swagger UI assets in Docker. Native source runs may
-    # intentionally use the CDN fallback because shared/swagger is absent.
-    bundled_swagger = (
-        Path(__file__).resolve().parents[1]
-        / "shared" / "swagger" / "swagger-ui-bundle.js"
-    ).is_file()
-    if bundled_swagger:
-        for prefix in ("/backend", "/ipr", "/vlp", "/nodal"):
-            routes.extend([
-                (f"{prefix}/_swagger/swagger-ui-bundle.js", "text/javascript"),
-                (f"{prefix}/_swagger/swagger-ui.css", "text/css"),
-            ])
-
-    for path, media in routes:
-        body = fetch(base + path, media)
-        if path.endswith("/docs"):
-            if "SwaggerUIBundle" not in body:
-                raise ValueError(f"{base}{path}: Swagger UI не найден")
-            prefix = path.removesuffix("/docs")
-            has_prefixed_assets = f"{prefix}/_swagger/" in body
-            uses_cdn_fallback = "cdn.jsdelivr.net/npm/swagger-ui-dist" in body
-            if f"{prefix}/openapi.json" not in body or not (has_prefixed_assets or uses_cdn_fallback):
-                raise ValueError(f"{base}{path}: Swagger UI не использует префикс {prefix} или не содержит assets")
-            if bundled_swagger and not has_prefixed_assets:
-                raise ValueError(f"{base}{path}: локальные Swagger assets не используют префикс {prefix}")
-        if path.endswith("/openapi.json"):
-            schema = json.loads(body)
-            expected = "/api/calculate" if path.startswith("/backend/") else f"/{path.split('/')[1]}/calc"
-            if "post" not in schema.get("paths", {}).get(expected, {}):
-                raise ValueError(f"{base}{path}: отсутствует POST {expected}")
-        if path.endswith("/health"):
-            name = "backend" if path == "/health" or path.startswith("/backend/") else path.split("/")[1]
-            if json.loads(body) != {"status": "ok", "service": name}:
-                raise ValueError(f"{base}{path}: некорректный health")
-        print(f"OK  Nginx    {base}{path}")
-
-    sample_path = Path(__file__).resolve().parents[1] / "examples" / "calculate.json"
-    sample = json.loads(sample_path.read_text(encoding="utf-8"))
-    result = json.loads(fetch(base + "/api/calculate", "application/json", sample))
-    if not isinstance(result.get("operating_point"), dict):
-        raise ValueError(f"{base}/api/calculate: нет рабочей точки")
-    print("OK  Nginx    POST /api/calculate")
-
-    # Exercise each public calculation route as well as the orchestrated backend route.
-    sampling = sample["sampling"]
-    ipr_input = {**sample["reservoir"], "wct": sample["pvt"]["wct"], "points": sampling["ipr_points"]}
-    vlp_input = {**sample["well"], "pvt": sample["pvt"], "q_max": sampling["q_max"],
-                 "points": sampling["vlp_points"]}
-    ipr = json.loads(fetch(base + "/ipr/calc", "application/json", ipr_input))
-    vlp = json.loads(fetch(base + "/vlp/calc", "application/json", vlp_input))
-    nodal = json.loads(fetch(base + "/nodal/calc", "application/json", {"ipr": ipr, "vlp": vlp}))
-    if len(nodal) != 1 or nodal[0] != result["operating_point"]:
-        raise ValueError(f"{base}: прямой вызов Nodal не совпал с backend")
-    print("OK  Nginx    POST /ipr/calc, /vlp/calc, /nodal/calc")
+            check_calculation(base, service_bases)
+        print(f"OK  {name:8} {base}{path}  {docs_base}/docs")
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--core", action="store_true", help="проверить только IPR, VLP и Nodal")
-    parser.add_argument("--compose", action="store_true", help="использовать DNS-имена внутри сети Compose")
+    mode = parser.add_mutually_exclusive_group()
+    mode.add_argument("--gateway", metavar="URL", help="проверить маршруты через один адрес Nginx")
+    mode.add_argument("--compose", action="store_true", help="использовать DNS-имена внутри сети Compose")
     parser.add_argument("--backend-port", type=int, default=8080, help="порт backend для проверки")
-    parser.add_argument("--proxy", help="проверить маршруты Nginx по указанному base URL, например http://nginx")
     options = parser.parse_args()
     try:
-        check(options.core, options.compose, options.backend_port)
-        if options.proxy:
-            check_proxy(options.proxy)
+        check(options.core, options.compose, options.backend_port, options.gateway.rstrip("/") if options.gateway else None)
     except (KeyError, ValueError, RuntimeError) as exc:
         sys.exit(f"FAIL  {exc}")

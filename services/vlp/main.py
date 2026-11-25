@@ -1,12 +1,10 @@
-import os
-
 from fastapi import HTTPException
 
 from services.vlp.model import calculate_vlp
 from shared.api import VALIDATION_ERRORS, create_app
 from shared.contracts import Curve, VlpRequest
 
-app = create_app("vlp", "Well Model Builder · VLP", docs_prefix=os.getenv("DOCS_PREFIX", ""), version="0.4.1")
+app = create_app("vlp", "Well Model Builder · VLP", version="0.4.1")
 
 
 @app.post("/vlp/calc", response_model=Curve, responses=VALIDATION_ERRORS, summary="Построить кривую подъёма")

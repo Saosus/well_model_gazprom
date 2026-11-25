@@ -63,7 +63,6 @@ a { color: var(--accent); font-weight: 600; text-underline-offset: 3px; }
   tbody tr { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; padding: 12px 14px; gap: 8px; }
   tbody th, tbody td { padding: 0; }
   .route { text-align: right; }
-  .route::before { content: "Путь "; font: .77rem/1.4 "Segoe UI", sans-serif; color: var(--muted); }
   .links { justify-content: flex-end; }
 }
 .back { color: #e0eee7; font-size: .88rem; }

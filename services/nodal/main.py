@@ -1,12 +1,10 @@
-import os
-
 from fastapi import HTTPException
 
 from services.nodal.model import calculate_nodal
 from shared.api import VALIDATION_ERRORS, create_app
 from shared.contracts import NodalRequest, NodalResult
 
-app = create_app("nodal", "Well Model Builder · Nodal", docs_prefix=os.getenv("DOCS_PREFIX", ""), version="0.5.0")
+app = create_app("nodal", "Well Model Builder · Nodal", version="0.5.0")
 
 
 @app.post("/nodal/calc", response_model=NodalResult, responses=VALIDATION_ERRORS, summary="Найти рабочую точку")

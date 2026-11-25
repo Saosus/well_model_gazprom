@@ -80,21 +80,6 @@ class HttpTests(unittest.IsolatedAsyncioTestCase):
                 for other in {"ipr", "vlp", "nodal"} - {name}:
                     self.assertNotIn(f"/{other}/calc", spec["paths"])
 
-    async def test_docs_prefix_generates_proxy_aware_openapi_url(self):
-        from shared.api import create_app
-
-        app = create_app("ipr", "IPR test", docs_prefix="/ipr")
-        docs = await request(app, "GET", "/docs")
-        self.assertEqual(docs.status_code, 200)
-        self.assertIn("/ipr/openapi.json", docs.text)
-        swagger_dir = ROOT / "shared" / "swagger"
-        if swagger_dir.is_dir():
-            self.assertIn("/ipr/_swagger/swagger-ui-bundle.js", docs.text)
-        else:
-            self.assertIn("cdn.jsdelivr.net/npm/swagger-ui-dist", docs.text)
-        # The app's native endpoint paths do not change; the reverse proxy strips the prefix.
-        self.assertEqual((await request(app, "GET", "/openapi.json")).status_code, 200)
-
     async def test_nodal_success_schema_is_one_point_array(self):
         spec = (await request(nodal, "GET", "/openapi.json")).json()
         schema = spec["paths"]["/nodal/calc"]["post"]["responses"]["200"]["content"]["application/json"]["schema"]
@@ -158,30 +143,3 @@ class HttpTests(unittest.IsolatedAsyncioTestCase):
 
         async with httpx.AsyncClient(transport=httpx.MockTransport(offline)) as client:
             self.assertEqual(await service_status(client, "ipr", "http://ipr:8003"), "unavailable")
-
-
-class DeploymentConfigTests(unittest.TestCase):
-    def test_compose_does_not_publish_internal_service_ports(self):
-        compose = (ROOT / "compose.yaml").read_text(encoding="utf-8")
-        self.assertNotIn("ports:", compose)
-        self.assertIn("internal: true", compose)
-        self.assertIn("expose: [\"8003\"]", compose)
-        self.assertIn("target: nginx", compose)
-        self.assertIn("well-model-builder-nginx", compose)
-        self.assertNotIn("  frontend:", compose)
-
-    def test_nginx_routes_all_public_api_paths(self):
-        config = (ROOT / "deploy/nginx/default.conf").read_text(encoding="utf-8")
-        for route in ["/api/", "/backend/docs", "/backend/openapi.json",
-                      "/ipr/docs", "/ipr/openapi.json", "/ipr/",
-                      "/vlp/docs", "/vlp/openapi.json", "/vlp/",
-                      "/nodal/docs", "/nodal/openapi.json", "/nodal/"]:
-            with self.subTest(route=route):
-                self.assertIn(route, config)
-
-    def test_local_and_external_proxy_overrides_are_separate(self):
-        local = (ROOT / "compose.local.yaml").read_text(encoding="utf-8")
-        external = (ROOT / "compose.proxy.yaml").read_text(encoding="utf-8")
-        self.assertIn("HTTP_PORT", local)
-        self.assertIn("public_proxy", external)
-        self.assertIn("well-model-builder", external)

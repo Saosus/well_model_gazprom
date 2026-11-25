@@ -1,4 +1,4 @@
-import {backendUrl} from "./backend-port.js";
+import { serviceUrl } from "./service-url.js";
 import {drawChart} from "./chart.js";
 
 const form = document.querySelector("#parameters");
@@ -8,7 +8,7 @@ const status = document.querySelector("#status");
 const button = document.querySelector("#calculate");
 const flow = document.querySelector("#flow");
 const pressure = document.querySelector("#pressure");
-const endpoint = backendUrl("/api/calculate");
+const endpoint = serviceUrl("backend", "/api/calculate");
 const format = new Intl.NumberFormat("ru-RU", {maximumFractionDigits: 5});
 let current = null;
 let displayed = null;

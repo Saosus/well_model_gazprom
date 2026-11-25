@@ -2,6 +2,8 @@
 
 Версия с формулами базы знаний, на основе этапа 08 хакатона «Разработка системы модели скважины». Дашборд строит IPR и VLP и показывает рабочую точку. Автотесты проверяют расчётные сервисы по отдельности и весь путь от параметров скважины до ответа backend.
 
+Для запуска сайта через Nginx см. [Запуск в Docker](#запуск-в-docker-через-nginx).
+
 ## Проверка точности
 
 Из корня распакованного проекта выполните в PowerShell с Python 3.12:
@@ -24,7 +26,7 @@ py -3.12 -m venv .venv
 
 ## Проверка дашборда
 
-На Windows запустите команду из корня проекта с установленным окружением Python 3.12. Для новой папки сначала выполните команды создания окружения и установки из раздела «Запуск без Docker (Python + venv)».
+На Windows запустите команду из корня проекта с установленным окружением Python 3.12. Для новой папки сначала выполните команды создания окружения и установки из раздела «Запуск на Windows без Docker».
 
 ```powershell
 .\.venv\Scripts\python.exe scripts/run_local.py --backend-port 18080
@@ -54,7 +56,7 @@ py -3.12 -m venv .venv
 
 ## Быстрая проверка общего расчёта
 
-На Windows запустите из корня проекта `scripts/run_local.py` в окружении Python 3.12. Для первой установки выполните команды из раздела «Запуск без Docker (Python + venv)».
+На Windows запустите из корня проекта `scripts/run_local.py` в окружении Python 3.12. Для первой установки выполните команды из раздела «Запуск на Windows без Docker».
 
 ```powershell
 .\.venv\Scripts\python.exe scripts/run_local.py
@@ -91,11 +93,11 @@ $r.operating_point | ConvertTo-Json
 curl.exe -H "Content-Type: application/json" --data-binary "@examples/calculate.json" http://127.0.0.1:18080/api/calculate
 ```
 
-Страница на порту 3000 автоматически использует выбранный порт, Swagger доступен на `http://127.0.0.1:18080/docs`. Стандартный запуск и поставка по ТЗ используют 8080.
+Страница на порту 3000 автоматически использует выбранный порт, Swagger доступен на `http://127.0.0.1:18080/docs`. При нативном запуске порт backend по умолчанию — 8080.
 
 ## Быстрая проверка Nodal
 
-В PowerShell откройте корень распакованного проекта. Если окружение ещё не создано, выполните команды установки из раздела «Запуск без Docker (Python + venv)». Для отдельного запуска Nodal выполните команду:
+В PowerShell откройте корень распакованного проекта. Если окружение ещё не создано, выполните команды установки из раздела «Запуск на Windows без Docker». Для отдельного запуска Nodal выполните команду:
 
 ```powershell
 .\.venv\Scripts\python.exe -m uvicorn services.nodal.main:app --port 8004
@@ -121,13 +123,13 @@ curl.exe -i -H "Content-Type: application/json" --data-binary "@examples/nodal.j
 
 ## Быстрая проверка VLP
 
-В PowerShell из корня распакованного проекта запустите VLP. Команда предполагает установленное окружение проекта. Для первой установки см. «Запуск без Docker (Python + venv)».
+В PowerShell из корня распакованного проекта запустите VLP. Команда предполагает установленное окружение проекта. Для первой установки см. «Запуск на Windows без Docker».
 
 ```powershell
 .\.venv\Scripts\python.exe -m uvicorn services.vlp.main:app --port 8002
 ```
 
-Для браузерной проверки откройте Swagger VLP через единый Nginx: `http://127.0.0.1:8080/vlp/docs` (после запуска с `compose.local.yaml`), выберите `POST /vlp/calc` и нажмите **Try it out → Execute**. Форма содержит запрос из §5.3. Тот же запрос сохранён в [examples/vlp.json](examples/vlp.json). Для проверки без браузера выполните во втором окне из корня проекта:
+Откройте [Swagger VLP](http://localhost:8002/docs), выберите `POST /vlp/calc`, нажмите **Try it out → Execute**. Форма содержит запрос из §5.3. Тот же запрос сохранён в [examples/vlp.json](examples/vlp.json). Для проверки без браузера выполните во втором окне из корня проекта:
 
 ```powershell
 $body = Get-Content -Raw -Encoding utf8 .\examples\vlp.json
@@ -154,7 +156,7 @@ $r | ConvertTo-Json -Compress
 
 ## Быстрая проверка PVT
 
-Из корня распакованного проекта выполните в PowerShell команды для установленного окружения проекта. На новой машине сначала установите зависимости по разделу «Запуск без Docker (Python + venv)».
+Из корня распакованного проекта выполните в PowerShell команды для установленного окружения проекта. На новой машине сначала установите зависимости по разделу «Запуск на Windows без Docker».
 
 ```powershell
 .\.venv\Scripts\python.exe -m scripts.pvt_example
@@ -172,118 +174,52 @@ docker compose exec -T vlp python -m scripts.pvt_example
 
 Для вызова PVT отдельно импортируйте `calculate_pvt` из `services.vlp.pvt` и передайте `request.pvt`, `pressure_atm`, `temperature_c`. В результате `mixture` содержит свойства для гидравлики. [Интерфейс с единицами, пример вызова из VLP, формулы и источники](docs/pvt.md)
 
-## Запуск в Docker
+## Запуск в Docker через Nginx
 
-Требуются Docker Engine и Docker Compose v2. Все контейнеры приложения работают в отдельной внутренней Docker-сети `app_internal`. Порты IPR, VLP, Nodal и Backend **не публикуются на хост**. Единственная точка входа — контейнер Nginx: он раздаёт статический frontend из собственного образа и проксирует запросы к backend и трём расчётным API.
+В Docker Desktop включите Linux containers. Откройте PowerShell в распакованной папке с `compose.yaml`. Для первой сборки нужен доступ к Docker Hub и PyPI.
 
-### Полный запуск без публикации портов
-
-Из каталога, где находится `compose.yaml`, выполните:
-
-```bash
-docker compose --profile app up -d --build
-docker compose --profile app ps
-docker compose --profile app exec -T backend python scripts/smoke.py --compose --proxy http://nginx
+```powershell
+docker compose up -d --build --remove-orphans
+docker compose ps
 ```
 
-Этот режим предназначен для подключения внешнего reverse proxy по общей Docker-сети. Самостоятельно с хоста приложение недоступно — это намеренное поведение, а не ошибка запуска.
+Откройте [дашборд](http://localhost/) или [страницу сервисов](http://localhost/services.html). Порт хоста по умолчанию — 80. Если он занят, укажите `NGINX_PORT=18080` в файле `.env` рядом с `compose.yaml`, повторите команду запуска и откройте `http://localhost:18080/`. Все пути ниже работают и на выбранном порту.
 
-### Локальный доступ через один порт Nginx
+| Компонент | Расчёт (POST) | Состояние (GET) | Swagger / схема (GET) |
+| --- | --- | --- | --- |
+| Backend | `/api/calculate` | `/health`, `/api/services/health` | `/docs`, `/openapi.json` |
+| IPR | `/ipr/calc` | `/ipr/health` | `/ipr/docs`, `/ipr/openapi.json` |
+| VLP | `/vlp/calc` | `/vlp/health` | `/vlp/docs`, `/vlp/openapi.json` |
+| Nodal | `/nodal/calc` | `/nodal/health` | `/nodal/docs`, `/nodal/openapi.json` |
 
-Для проверки на рабочей станции подключите дополнительный Compose-файл. Он публикует только Nginx на loopback; внутренние порты сервисов остаются закрытыми от хоста.
+Nginx отдаёт файлы из `frontend/` и проксирует API по именам сервисов в сети Compose. Конфигурация входит в образ из [services/backend/nginx.conf](services/backend/nginx.conf). Общие JS и CSS для Swagger доступны по `/_swagger/`. Backend вызывает расчётные сервисы внутри сети.
 
-```bash
-docker compose -f compose.yaml -f compose.local.yaml --profile app up -d --build
-docker compose -f compose.yaml -f compose.local.yaml --profile app exec -T backend python scripts/smoke.py --compose --proxy http://nginx
+**Проверка через Nginx**
+
+```powershell
+docker compose exec -T backend python scripts/smoke.py --compose
 ```
 
-Откройте `http://127.0.0.1:8080/`. Порт можно изменить через `HTTP_PORT` в `.env`; адрес привязки по умолчанию — `127.0.0.1`. Не меняйте его на `0.0.0.0`, если перед приложением не настроены TLS и ограничения доступа.
+Проверка обращается к `http://nginx` из контейнера backend и сравнивает общий расчёт с ответами отдельных сервисов. Для проверки с хоста можно выполнить `python scripts/smoke.py --gateway http://localhost` или указать свой адрес. Для остановки выполните `docker compose down`.
 
-### Подключение к существующему Nginx через Docker-сеть
+**Подключение к существующему reverse proxy без публикации портов**
 
-На сервере один раз создайте внешнюю сеть (или укажите уже существующую через `PROXY_NETWORK`):
-
-```bash
-docker network create public_proxy
+```powershell
+docker compose -f compose.yaml up -d --build --remove-orphans
 ```
 
-Запустите WMB с дополнительным Compose-файлом:
+Явный выбор базового файла оставляет публикацию HTTP-порта из `compose.override.yaml` выключенной. Подключите контейнер внешнего прокси к сети `well-model-builder_default` и направьте весь трафик домена на `http://well-model-gateway:80` с сохранением исходного пути. Для прокси, описанного в другом Compose-проекте, эту сеть можно объявить как `external: true` с именем `well-model-builder_default` и добавить её сервису прокси. Для остановки используйте `docker compose -f compose.yaml down`.
 
-```bash
-docker compose -f compose.yaml -f compose.proxy.yaml --profile app up -d --build
+**Только расчётные сервисы**
+
+```powershell
+docker compose up -d --build ipr vlp nodal
+docker compose exec -T ipr python scripts/smoke.py --compose --core
 ```
-
-Внешний Nginx должен быть подключён к той же сети `public_proxy`. Для контейнера WMB в ней зарегистрирован DNS-алиас `well-model-builder`. Если внешний Nginx находится в отдельном Compose-проекте, в его `compose.yaml` подключите только сам reverse proxy к этой сети:
-
-```yaml
-services:
-  nginx:
-    networks:
-      - default
-      - public_proxy
-
-networks:
-  public_proxy:
-    external: true
-    name: public_proxy
-```
-
-В конфигурации внешнего Nginx используйте отдельный домен (приложение рассчитано на размещение в корне virtual host, а не в подпапке):
-
-```nginx
-server {
-    # На обычном сервере используйте 443. Если порт занят Xray,
-    # можно использовать 8444 и открыть его в firewall.
-    listen 8444 ssl;
-    server_name wmb.example.org;
-
-    ssl_certificate /etc/letsencrypt/live/wmb.example.org/fullchain.pem;
-    ssl_certificate_key /etc/letsencrypt/live/wmb.example.org/privkey.pem;
-    ssl_protocols TLSv1.2 TLSv1.3;
-
-    location / {
-        proxy_pass http://well-model-builder:80;
-        proxy_http_version 1.1;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-        proxy_connect_timeout 5s;
-        proxy_read_timeout 70s;
-        proxy_send_timeout 70s;
-    }
-}
-```
-
-Если внешний Nginx работает на том же VPS, его Compose должен опубликовать выбранный внешний порт контейнера 443 (например, `8444:443`). Порт 443 хоста можно оставить Xray. Сертификат и ACME HTTP-01 обслуживаются существующим Certbot; challenge на порту 80 должен продолжать работать.
-
-Ограничения доступа, Basic Auth и rate limiting при публичной публикации рекомендуется задавать на внешнем edge Nginx. Контейнерный Nginx WMB отвечает за маршрутизацию внутри приложения и не публикует порт на хост в этом режиме.
-
-### Остановка
-
-```bash
-docker compose --profile app down
-```
-
-Данные приложения не хранятся в bind mounts или named volumes; пересоздание контейнеров не требует сохранения изменяемых данных. Если позднее появятся пользовательские загрузки или БД, для них нужно добавить отдельные постоянные тома.
-
-## Маршруты единого Nginx entrypoint
-
-| Компонент | Путь через Nginx | Назначение |
-| --- | --- | --- |
-| Frontend (Nginx static) | `/` и `/services.html` | Дашборд и состояние системы |
-| Backend | `/api/calculate`, `/api/services/health` | Оркестрация расчёта и статусы |
-| Backend | `/backend/health`, `/backend/docs`, `/backend/openapi.json` | Health и Swagger backend |
-| IPR | `/ipr/calc`, `/ipr/health`, `/ipr/docs`, `/ipr/openapi.json` | Расчёт и документация IPR |
-| VLP | `/vlp/calc`, `/vlp/health`, `/vlp/docs`, `/vlp/openapi.json` | Расчёт и документация VLP |
-| Nodal | `/nodal/calc`, `/nodal/health`, `/nodal/docs`, `/nodal/openapi.json` | Расчёт и документация Nodal |
-| Nginx | `/nginx-health` | Проверка reverse proxy |
-
-Все Swagger UI используют собственные префиксы и загружают соответствующие схемы и локальные Swagger-ресурсы. Прямые пути `/docs`, `/openapi.json`, `/health` и маршруты сервисов внутри контейнеров сохранены для локальной разработки и внутренних проверок.
 
 ## Расчёт IPR
 
-Для отдельного запуска расчётного контейнера выполните `docker compose up -d --build ipr`. Его API не публикуется на хост. Чтобы открыть Swagger через единый Nginx, запустите полный стек с `compose.local.yaml` и перейдите на `http://127.0.0.1:8080/ipr/docs`. В форме уже подставлен пример из §5.2 ТЗ.
+После запуска всего проекта в Docker откройте [Swagger IPR](http://localhost/ipr/docs). Выберите `POST /ipr/calc`, нажмите **Try it out** и **Execute**. В форму уже подставлен пример из §5.2 ТЗ.
 
 | Поле | Смысл и единицы | Допустимые значения |
 | --- | --- | --- |
@@ -299,7 +235,7 @@ docker compose --profile app down
 
 ```powershell
 $body = '{"p_res":200,"wct":100,"pi":1,"pb":150,"points":2}'
-Invoke-RestMethod -Method Post -Uri 'http://localhost:8003/ipr/calc' -ContentType 'application/json' -Body $body | ConvertTo-Json -Compress
+Invoke-RestMethod -Method Post -Uri 'http://localhost/ipr/calc' -ContentType 'application/json' -Body $body | ConvertTo-Json -Compress
 ```
 
 ```json
@@ -323,7 +259,7 @@ Invoke-RestMethod -Method Post -Uri 'http://localhost:8003/ipr/calc' -ContentTyp
 
 ## Контракт дашборда и backend
 
-Команда использует `POST http://localhost:8080/api/calculate` с `Content-Type: application/json`. Дашборд передаёт данные скважины одним запросом. Обводнённость задаётся один раз в `pvt.wct` и используется обеими моделями. Имена входов и выходов расчётных сервисов соответствуют §5 ТЗ.
+Дашборд использует `POST /api/calculate` с `Content-Type: application/json`. Дашборд передаёт данные скважины одним запросом. Обводнённость задаётся один раз в `pvt.wct` и используется обеими моделями. Имена входов и выходов расчётных сервисов соответствуют §5 ТЗ.
 
 ### Пример запроса
 
@@ -385,23 +321,19 @@ Invoke-RestMethod -Method Post -Uri 'http://localhost:8003/ipr/calc' -ContentTyp
 
 | Переменная | В Compose | При запуске на хосте по умолчанию |
 | --- | --- | --- |
+| `NGINX_PORT` | Публикуемый порт Nginx, по умолчанию 80 | Используется только в Docker |
 | `IPR_URL` | `http://ipr:8003` | `http://127.0.0.1:8003` |
 | `VLP_URL` | `http://vlp:8002` | `http://127.0.0.1:8002` |
 | `NODAL_URL` | `http://nodal:8004` | `http://127.0.0.1:8004` |
-| `FRONTEND_ORIGINS` | CORS-origin для отдельных локальных/внешних интеграций | Локальные адреса разработки |
-| `HTTP_BIND` | Адрес публикации Nginx в `compose.local.yaml` | `127.0.0.1` |
-| `HTTP_PORT` | Порт публикации Nginx в `compose.local.yaml` | `8080` |
-| `PROXY_NETWORK` | Имя общей сети внешнего reverse proxy в `compose.proxy.yaml` | `public_proxy` |
-| `COMPOSE_PROJECT_NAME` | Имя Compose-проекта | `well-model-builder` |
-| `IMAGE_TAG` | Тег локально собираемых образов API и Nginx | `local` |
+| `FRONTEND_ORIGINS` | Адреса страниц, которым разрешены запросы из браузера, через запятую | Те же значения |
 
-В обычном Compose-режиме браузер и backend работают через один origin Nginx, поэтому CORS для дашборда не требуется. `compose.local.yaml` публикует только Nginx на loopback. `compose.proxy.yaml` вместо публикации порта подключает Nginx приложения к внешней Docker-сети. При нативном запуске `scripts/run_local.py` frontend остаётся на порту 3000 и использует отдельный порт backend, заданный `--backend-port`. Исключения для локальных настроек, ключей, IDE, виртуальных окружений и кэшей заданы в `.gitignore` и `.dockerignore`.
+В Docker дашборд и API доступны с одного адреса. Следующие настройки CORS относятся к раздельному запуску frontend и backend. По умолчанию разрешены `http://localhost:3000`, `http://127.0.0.1:3000` и `http://[::1]:3000`. При доступе с другой машины добавьте адрес страницы в `FRONTEND_ORIGINS`, например `http://192.168.1.10:3000` для сервера с таким IP. Браузер обращается к порту 8080 того же хоста. При нативном запуске настройки читаются из окружения процесса. Исключения для локальных настроек, ключей, IDE, виртуальных окружений и кэшей заданы в `.gitignore` и `.dockerignore`.
 
 ## Тесты
 
-Тесты охватывают формулы IPR, сетку давления, свойства фаз PVT, баланс массы и газа, гидростатику и трение VLP, пересечение отрезков и общие узлы Nodal, границы ветвей, HTTP-контракты, Swagger/OpenAPI, health, валидацию и CORS. Для контейнерного запуска нужны Docker и доступ к реестрам при первой сборке. Python-контейнеры работают от непривилегированного пользователя `app` (UID/GID 10001); Nginx содержит статический frontend и конфигурацию reverse proxy в своём образе.
+Тесты охватывают формулы IPR, сетку давления, свойства фаз PVT, баланс массы и газа, гидростатику и трение VLP, пересечение отрезков и общие узлы Nodal, границы ветвей, HTTP-контракты, Swagger/OpenAPI, health, валидацию и CORS. Для контейнерного запуска нужны Docker и доступ к реестрам при первой сборке.
 
-```bash
+```powershell
 docker build --target tests -t well-model-builder-tests .
 docker run --rm well-model-builder-tests
 ```
@@ -456,133 +388,24 @@ Python 3.12.14, команда `python -m unittest discover -s tests -v` — 47 
 
 </details>
 
-## Запуск без Docker (Python + venv)
+## Запуск на Windows без Docker
 
-Этот способ предназначен для демонстрации на компьютерах, где нет Docker или Podman. Контейнеры и системный Nginx не нужны: `scripts/run_local.py` запускает каждый компонент отдельным процессом Python, а `scripts.local_frontend` раздаёт статические файлы интерфейса через Uvicorn.
-
-Нужны:
-
-- Python **3.12** (та же основная версия, что используется в Docker-образе);
-- стандартный модуль `venv` и `pip`;
-- браузер с включённым JavaScript;
-- доступ к PyPI на этапе установки зависимостей. После установки расчёты и frontend работают локально. Для Swagger UI в нативном режиме браузеру также нужен доступ к CDN `cdn.jsdelivr.net`, откуда загружаются его JS и CSS.
-
-Все пять процессов по умолчанию слушают только `127.0.0.1`, поэтому приложение доступно в браузере на том же компьютере и не публикуется в локальную сеть или Интернет.
-
-### Windows 10/11 · PowerShell
-
-Откройте PowerShell в корне распакованного проекта. Проверьте, что установлен Python 3.12:
-
-```powershell
-py -3.12 --version
-```
-
-Создайте виртуальное окружение и установите runtime-зависимости из lock-файла:
+Понадобится Python 3.12 с доступом к PyPI для установки зависимостей. Для статического frontend достаточно браузера. Команды выполняются в PowerShell из корня проекта.
 
 ```powershell
 py -3.12 -m venv .venv
-.\.venv\Scripts\python.exe -m pip install -r requirements.lock
-```
-
-Запустите все компоненты:
-
-```powershell
+.\.venv\Scripts\python.exe -m pip install -r requirements-dev.lock
+.\.venv\Scripts\python.exe -m pytest -q
 .\.venv\Scripts\python.exe scripts/run_local.py
 ```
 
-Активация окружения необязательна: команды выше явно используют Python из `.venv` и не зависят от PowerShell Execution Policy. При желании можно активировать окружение командой `.\.venv\Scripts\Activate.ps1`, после чего вместо полного пути использовать `python`.
+Оставьте окно с сервисами открытым. Во втором окне PowerShell перейдите в тот же каталог и выполните проверку.
 
-### Linux · macOS (Bash/Zsh)
-
-В терминале перейдите в корень распакованного проекта. Убедитесь, что команда `python3.12` указывает именно на Python 3.12:
-
-```bash
-python3.12 --version
+```powershell
+.\.venv\Scripts\python.exe scripts/smoke.py
 ```
 
-Создайте и активируйте окружение, установите закреплённые зависимости и запустите приложение:
-
-```bash
-python3.12 -m venv .venv
-source .venv/bin/activate
-python -m pip install -r requirements.lock
-python scripts/run_local.py
-```
-
-На Debian/Ubuntu, если команда `venv` отсутствует, установите пакет `python3.12-venv` для используемой версии Python 3.12 и повторите создание окружения. Не устанавливайте зависимости через системный `pip`: используйте активированное `.venv`.
-
-### Открыть дашборд и проверить сервисы
-
-После запуска оставьте первое окно терминала открытым. Откройте в браузере:
-
-- [Дашборд](http://127.0.0.1:3000/);
-- [Страница состояния сервисов](http://127.0.0.1:3000/services.html);
-- [Swagger Backend](http://127.0.0.1:8080/docs);
-- [Swagger IPR](http://127.0.0.1:8003/docs);
-- [Swagger VLP](http://127.0.0.1:8002/docs);
-- [Swagger Nodal](http://127.0.0.1:8004/docs).
-
-Для полной проверки откройте **второе** окно терминала в корне проекта и активируйте то же окружение. На Windows используйте `.\.venv\Scripts\python.exe`, на Linux/macOS — `python` после `source .venv/bin/activate`:
-
-```bash
-python scripts/smoke.py
-```
-
-Smoke-тест дождётся ответов health, проверит контракты и Swagger/OpenAPI, вызовет IPR, VLP, Nodal и общий `POST /api/calculate`, а затем сравнит рабочую точку backend с последовательным прямым вызовом расчётных сервисов. При успехе команда завершится с кодом 0.
-
-### Установка зависимостей для тестов и проверки точности
-
-Для обычной демонстрации достаточно `requirements.lock`. Для запуска pytest и полного набора проверок установите дополнительные dev-зависимости:
-
-```bash
-python -m pip install -r requirements-dev.lock
-python -m unittest discover -s tests -v
-python -m pytest -q
-python -m scripts.verify_accuracy
-```
-
-`requirements-dev.lock` включает runtime-зависимости из `requirements.lock`, поэтому его можно использовать и как единственную команду установки для разработки. `scripts.verify_accuracy` самостоятельно поднимает временные HTTP-процессы, запускает автотесты и обновляет [accuracy-report.md](accuracy-report.md); предварительно запускать `scripts/run_local.py` для этой команды не требуется.
-
-### Дополнительные режимы запуска
-
-**Только расчётные сервисы без Backend и frontend:**
-
-```bash
-python scripts/run_local.py --core
-python scripts/smoke.py --core
-```
-
-**Если порт Backend 8080 занят:** запустите его, например, на 18080. Frontend автоматически получит этот порт через `/backend-port.js`:
-
-```bash
-python scripts/run_local.py --backend-port 18080
-```
-
-Во втором терминале проверяйте с тем же параметром:
-
-```bash
-python scripts/smoke.py --backend-port 18080
-```
-
-В этом режиме Swagger Backend будет доступен на `http://127.0.0.1:18080/docs`; остальные порты не меняются. Порт frontend остаётся 3000.
-
-### Остановка и устранение проблем
-
-Чтобы остановить все дочерние процессы, вернитесь в первое окно терминала и нажмите `Ctrl+C`. Закрывать процессы по одному не требуется. Для повторного запуска снова выполните команду `scripts/run_local.py`.
-
-Если при старте появляется `Address already in use` или `WinError 10013`, один из портов уже занят. По умолчанию нативный запуск использует:
-
-| Компонент | Порт | URL |
-| --- | ---: | --- |
-| Frontend | 3000 | `http://127.0.0.1:3000/` |
-| Backend | 8080 | `http://127.0.0.1:8080/` |
-| VLP | 8002 | `http://127.0.0.1:8002/` |
-| IPR | 8003 | `http://127.0.0.1:8003/` |
-| Nodal | 8004 | `http://127.0.0.1:8004/` |
-
-На Linux/macOS занятые порты можно посмотреть командой `ss -ltnp`; на Windows — `Get-NetTCPConnection -LocalPort 3000,8002,8003,8004,8080 -ErrorAction SilentlyContinue`. Если занят только Backend, используйте `--backend-port 18080`. Если занят другой порт, освободите его перед запуском.
-
-По умолчанию сервисы привязаны к loopback (`127.0.0.1`). Не меняйте bind-адреса на `0.0.0.0` для демонстрации в Интернете: нативный режим не включает TLS, аутентификацию и внешний reverse proxy. Для публичного или сетевого развёртывания используйте Docker Compose за внешним Nginx либо отдельно настройте защищённый reverse proxy.
+Для трёх сервисов укажите `--core` в командах запуска и проверки. Ctrl+C в первом окне останавливает дочерние процессы. На Linux и macOS используйте `python3.12 -m venv .venv` и `.venv/bin/python` вместо пути Windows. При нативном запуске Swagger UI загружает JS и CSS с CDN. Схемы `/openapi.json`, страница состояния и HTTP-маршруты доступны локально.
 
 ## Структура для продолжения разработки
 

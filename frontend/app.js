@@ -1,28 +1,11 @@
-import {backendUrl, directBackend} from './backend-port.js';
+import { serviceUrl } from "./service-url.js";
 
-const localFrontend = directBackend;
 const components = [
-  {
-    id: "ipr", name: "IPR", purpose: "Приток из пласта", route: "/ipr/*", port: 8003,
-    local: {health: "/ipr/health", docs: "/docs"},
-    proxy: {health: "/ipr/health", docs: "/ipr/docs"},
-  },
-  {
-    id: "vlp", name: "VLP", purpose: "Подъём по стволу и PVT", route: "/vlp/*", port: 8002,
-    local: {health: "/vlp/health", docs: "/docs"},
-    proxy: {health: "/vlp/health", docs: "/vlp/docs"},
-  },
-  {
-    id: "nodal", name: "Nodal", purpose: "Пересечение кривых", route: "/nodal/*", port: 8004,
-    local: {health: "/nodal/health", docs: "/docs"},
-    proxy: {health: "/nodal/health", docs: "/nodal/docs"},
-  },
-  {
-    id: "backend", name: "Backend", purpose: "API дашборда", route: "/api/*", port: 8080,
-    local: {health: "/health", docs: "/docs"},
-    proxy: {health: "/backend/health", docs: "/backend/docs"},
-  },
-  {id: "frontend", name: "Frontend", purpose: "Веб-интерфейс", route: "/", port: 3000},
+  { id: "ipr", name: "IPR", purpose: "Приток из пласта", health: "/ipr/health" },
+  { id: "vlp", name: "VLP", purpose: "Подъём по стволу и PVT", health: "/vlp/health" },
+  { id: "nodal", name: "Nodal", purpose: "Пересечение кривых", health: "/nodal/health" },
+  { id: "backend", name: "Backend", purpose: "API дашборда", health: "/health" },
+  { id: "frontend", name: "Frontend", purpose: "Веб-интерфейс" },
 ];
 
 const rows = document.querySelector("#services");
@@ -30,12 +13,12 @@ const refresh = document.querySelector("#refresh");
 const checked = document.querySelector("#checked");
 const indicators = new Map();
 
-function serviceUrl(component, key) {
-  const path = (localFrontend ? component.local : component.proxy)[key];
-  if (component.id === "backend" && localFrontend) return backendUrl(path).href;
-  const url = new URL(path, window.location.origin);
-  if (localFrontend) url.port = String(component.port);
-  return url.href;
+function link(label, component, path) {
+  const anchor = document.createElement("a");
+  anchor.textContent = label;
+  anchor.setAttribute("aria-label", component.name + " — " + label);
+  anchor.href = serviceUrl(component.id, path).href;
+  return anchor;
 }
 
 function setState(id, state, label) {
@@ -54,26 +37,18 @@ for (const component of components) {
   purpose.textContent = component.purpose;
   name.append(purpose);
   row.append(name);
-
   const route = row.insertCell();
   route.className = "route";
-  route.textContent = component.route;
-
+  route.textContent = component.health || "/";
   const state = document.createElement("span");
   state.className = "state";
   row.insertCell().append(state);
   indicators.set(component.id, state);
-
   const links = document.createElement("div");
   links.className = "links";
-  if (component.local) {
-    for (const [label, key] of [["Health", "health"], ["Swagger", "docs"]]) {
-      const anchor = document.createElement("a");
-      anchor.textContent = label;
-      anchor.setAttribute("aria-label", component.name + " — " + label);
-      anchor.href = serviceUrl(component, key);
-      links.append(anchor);
-    }
+  if (component.health) {
+    links.append(link("Health", component, component.health));
+    links.append(link("Swagger", component, "/docs"));
     setState(component.id, "unknown", "Ожидание");
   } else {
     links.textContent = "Эта страница";
@@ -82,22 +57,18 @@ for (const component of components) {
   row.insertCell().append(links);
 }
 
-const schema = document.querySelector("#schema");
-schema.href = localFrontend ? backendUrl("/openapi.json").href : "/backend/openapi.json";
+document.querySelector("#schema").href = serviceUrl("backend", "/openapi.json");
 
 async function checkServices() {
   refresh.disabled = true;
   checked.textContent = "Проверяем связь с компонентами…";
-  for (const item of components.filter(item => item.local)) {
+  for (const item of components.filter(item => item.health)) {
     setState(item.id, "unknown", "Проверка…");
   }
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 6000);
   try {
-    const statusUrl = localFrontend
-      ? backendUrl("/api/services/health").href
-      : "/api/services/health";
-    const response = await fetch(statusUrl, {
+    const response = await fetch(serviceUrl("backend", "/api/services/health"), {
       cache: "no-store", signal: controller.signal,
     });
     if (!response.ok) throw new Error("health");
@@ -107,7 +78,8 @@ async function checkServices() {
       const ok = statuses[id] === "ok";
       setState(id, ok ? "ok" : "unavailable", ok ? "На связи" : "Недоступен");
     }
-    checked.textContent = "Последняя проверка в " + new Date().toLocaleTimeString("ru-RU");
+    const time = new Date().toLocaleTimeString("ru-RU");
+    checked.textContent = "Последняя проверка в " + time;
   } catch {
     setState("backend", "unavailable", "Нет ответа");
     for (const id of ["ipr", "vlp", "nodal"]) setState(id, "unknown", "Не проверен");

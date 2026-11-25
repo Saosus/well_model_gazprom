@@ -19,7 +19,7 @@ SERVICE_URLS = {
 }
 default_origins = "http://localhost:3000,http://127.0.0.1:3000,http://[::1]:3000"
 origins = os.getenv("FRONTEND_ORIGINS", default_origins).split(",")
-app = create_app("backend", "Well Model Builder · Backend", version="0.6.0", docs_prefix=os.getenv("DOCS_PREFIX", ""))
+app = create_app("backend", "Well Model Builder · Backend", version="0.6.0")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[origin.strip() for origin in origins if origin.strip()],
