@@ -98,7 +98,7 @@ def make_router(calculate, *, store=None, client_factory=ChatClient):
                         session.last_result=result
                         p=result.operating_point
                         status='calculated'
-                        answer=f"Данные из файлов приняты. Дебит жидкости: {p.q_liq:.6g} м³/сут. Забойное давление: {p.p_wf:.6g} атм. Рабочая точка — равенство притока и подъёма жидкости."
+                        answer=f"Данные из файлов приняты. Дебит жидкости: {p.q_liq:.2f} м³/сут. Забойное давление: {p.p_wf:.2f} атм. Рабочая точка — равенство притока и подъёма жидкости."
                     except (HTTPException, ValidationError, TimeoutError) as exc:
                         status='calculation_error'; answer=Assistant.failure_message(exc)+" Рабочая точка не выдана."
                     trace.append({'tool':'calculate_well','ok':result is not None,'duration_ms':round((time.monotonic()-started)*1000),'trigger':'backend'})
@@ -157,7 +157,7 @@ def make_router(calculate, *, store=None, client_factory=ChatClient):
                                     spec=CalibrationRequest(well=WellCase(name=row['name'],parameters=row['parameters'],measured=Measurement(q_liq=q)),pi_min=lo,pi_max=hi,count=int(pi_cmd[4]))
                                     analysis=await calibrate(spec,calculate)
                                     best=analysis['best_index']
-                                    answer='Подходящий PI не найден в заданных пределах.' if best is None else f"Лучший среди проверенных PI: {analysis['rows'][best]['pi']:.6g} м³/(сут·атм). Дебит: {analysis['rows'][best]['calculation']['operating_point']['q_liq']:.6g} м³/сут. Исходные параметры не изменены; глобальный оптимум не гарантирован."
+                                    answer='Подходящий PI не найден в заданных пределах.' if best is None else f"Лучший среди проверенных PI: {analysis['rows'][best]['pi']:.6g} м³/(сут·атм). Дебит: {analysis['rows'][best]['calculation']['operating_point']['q_liq']:.2f} м³/сут. Исходные параметры не изменены; глобальный оптимум не гарантирован."
                                 else:
                                     report=row; answer='Отчёт по последнему успешному расчёту готов. Скачайте его кнопкой под сообщением.'
                             except (ValueError, ValidationError):

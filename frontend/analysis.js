@@ -1,5 +1,6 @@
 import {serviceUrl} from './service-url.js';
 import {drawChart} from './chart.js';
+import {formatOperatingPoint} from './number-format.js';
 const $=id=>document.getElementById(id);
 const fmt=x=>Number.isFinite(x)?new Intl.NumberFormat('ru-RU',{maximumSignificantDigits:8}).format(x):'—';
 const esc=x=>String(x??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -17,7 +18,7 @@ function graph(result){
   let ticks='';for(let i=0;i<=5;i++){const q=qm*(i/5),v=pm*(i/5);ticks+=`<path d="M${x(q)} ${t}V${b} M${l} ${y(v)}H${r}" stroke="#e0e6e4"/><text x="${x(q)}" y="${b+19}" text-anchor="middle">${esc(fmt(q))}</text><text x="${l-9}" y="${y(v)+4}" text-anchor="end">${esc(fmt(v))}</text>`;}
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" width="720" height="390" role="img" aria-label="IPR и VLP с рабочей точкой" font-family="Arial,sans-serif" font-size="12"><rect width="720" height="390" fill="white"/>${ticks}<path d="M${l} ${t}V${b}H${r}" fill="none" stroke="#374c47"/>${curve(ipr,'#087b69')}${curve(vlp,'#4265b0')}<circle cx="${x(p.q_liq)}" cy="${y(p.p_wf)}" r="6" fill="#c35925" stroke="white" stroke-width="1.5"/><text x="380" y="360" text-anchor="middle">Дебит жидкости, м³/сут</text><text transform="translate(17 175) rotate(-90)" text-anchor="middle">Забойное давление, атм</text><text x="380" y="382" text-anchor="middle"><tspan fill="#087b69">IPR</tspan> · <tspan fill="#4265b0">VLP</tspan> · <tspan fill="#c35925">Рабочая точка</tspan></text></svg>`;
 }
-function summaryRow(row){const p=row.calculation?.operating_point,c=row.comparison;return [row.name, row.pi??row.parameters?.reservoir?.pi??'—',p?.q_liq??'—',p?.p_wf??'—',row.measured?.q_liq??'—',row.measured?.p_wf??'—',c?.flow.delta??'—',c?.flow.percent??'—',c?.pressure?.delta??'—',c?.pressure?.percent??'—',row.error|| (c?.flagged?'Отклонение':p?'Рассчитан':'Нет результата')];}
+function summaryRow(row){const p=row.calculation?.operating_point,c=row.comparison;return [row.name, row.pi??row.parameters?.reservoir?.pi??'—',formatOperatingPoint(p?.q_liq),formatOperatingPoint(p?.p_wf),formatOperatingPoint(row.measured?.q_liq),formatOperatingPoint(row.measured?.p_wf),c?.flow.delta??'—',c?.flow.percent??'—',c?.pressure?.delta??'—',c?.pressure?.percent??'—',row.error|| (c?.flagged?'Отклонение':p?'Рассчитан':'Нет результата')];}
 const headers=['Скважина','PI, м³/(сут·атм)','Q расч., м³/сут','P расч., атм','Q факт., м³/сут','P факт., атм','ΔQ, м³/сут','ΔQ, %','ΔP, атм','ΔP, %','Статус'];
 const textValue=x=>typeof x==='number'?fmt(x):String(x??'—');
 function tableHTML(head,rows){return `<table><thead><tr>${head.map(x=>`<th>${esc(x)}</th>`).join('')}</tr></thead><tbody>${rows.map(row=>`<tr>${row.map(x=>`<td>${esc(textValue(x))}</td>`).join('')}</tr>`).join('')}</tbody></table>`;}
@@ -25,7 +26,7 @@ function tableMD(head,rows){return '| '+head.map(md).join(' | ')+' |\n| '+head.m
 function notes(row){return [...(row.issues||[]).map(i=>`${i.level==='warning'?'Предупреждение':'Ошибка'}: ${i.message}`),...(row.comparison?.notes||[]),...(row.comparison?[`Порог отклонения: ${fmt(row.comparison.threshold)} %. Δ = расчёт − факт; процент относительно факта, при нулевом факте не определён.`]:[]), row.error||''].filter(Boolean);}
 export function reportText(rows,format='html',title='Отчёт узлового анализа',conclusion=''){
   const isHTML=format==='html',table=isHTML?tableHTML:tableMD;
-  const body=rows.map(row=>{const p=row.calculation?.operating_point, caption=p?`Рабочая точка: ${fmt(p.q_liq)} м³/сут, ${fmt(p.p_wf)} атм. Приток и требуемое давление подъёма согласованы.`:'Рабочая точка не получена.';
+  const body=rows.map(row=>{const p=row.calculation?.operating_point, caption=p?`Рабочая точка: ${formatOperatingPoint(p.q_liq)} м³/сут, ${formatOperatingPoint(p.p_wf)} атм. Приток и требуемое давление подъёма согласованы.`:'Рабочая точка не получена.';
     const params=table(['Параметр','Единица','Значение'],parameterRows(row.parameters));const diagnostics=notes(row);
     const curveTable=p?table(['Кривая','Дебит, м³/сут','Давление, атм'],['ipr','vlp'].flatMap(k=>row.calculation[k].q_liq.map((q,i)=>[k.toUpperCase(),q,row.calculation[k].p_wf[i]]))):'';
     return isHTML?`<section><h2>${esc(row.name)}</h2><p>${esc(caption)}</p>${graph(row.calculation)}<h3>Исходные данные</h3>${params}<h3>Диагностика</h3><p>${esc(diagnostics.join(' ' )||'Нет дополнительных замечаний.')}</p>${p?`<details><summary>Координаты кривых</summary>${curveTable}</details>`:''}</section>`:`## ${md(row.name)}\n\n${caption}\n\n${graph(row.calculation)}\n\n### Исходные данные\n\n${params}\n\n### Диагностика\n\n${diagnostics.map(md).join('\n\n')||'Нет дополнительных замечаний.'}\n\n${p?'### Координаты кривых\n\n'+curveTable:''}`;}).join(isHTML?'':'\n\n');

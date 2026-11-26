@@ -42,7 +42,7 @@ def test_followup_uses_grounded_result_and_never_recalculates(monkeypatch):
     def send(text): return client.post('/api/assistant/chat',json={'session_id':sid,'message':text}).json()
     out=send('Какой получился дебит?')
     assert out['mode']=='conversation' and out['calculation'] is None
-    assert '5 м³/сут' in out['answer'] and '6 атм' in out['answer']
+    assert '5.00 м³/сут' in out['answer'] and '6.00 атм' in out['answer']
     assert out['tool_trace'][0]['ok'] is False
     assert '999999' not in send('Объясни результат')['answer']
     calc.assert_awaited_once()

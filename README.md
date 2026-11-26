@@ -36,6 +36,54 @@ docker compose exec backend python -c "import httpx; print(httpx.get('http://hos
 
 Проверка: `python -m pytest -q`, `node --experimental-default-type=module scripts/check_assistant_ui_logic.mjs`, опционально `python -m scripts.check_assistant_ui` (Playwright/Chromium). Автотесты используют тестовый адаптер LLM; фактическое качество ответов настроенной Ollama необходимо проверить на машине команды. Распознавание намерений и параметров пока опирается на серверные правила и поддерживаемые формы текста; сложные смешанные запросы могут требовать переформулировки. В этой среде браузерный прогон не завершён: Chromium блокирует локальную навигацию политикой администратора.
 
+## CI: автоматическая проверка GitHub Actions
+
+Workflow находится в `.github/workflows/ci.yml`. GitHub Actions запускает его автоматически при каждом `push` и `pull_request`; его также можно запустить вручную через **Actions → Well Model Builder CI → Run workflow**. Для CI не нужны SSH-ключи, LLM API keys, Ollama или другие секреты: тесты используют тестовые адаптеры и локальные расчётные сервисы.
+
+Проверка состоит из двух последовательных jobs:
+
+1. **Python tests, accuracy and frontend logic** — устанавливает Python 3.12 из `requirements-dev.lock`, проверяет зависимости (`pip check`), компилирует Python-модули, запускает весь набор `pytest`, затем `scripts.verify_accuracy` (аналитические эталоны, реальные HTTP-запросы, Nodal и E2E, включая `well_01`) и JavaScript regression checks для Well AI и экспорта отчётов.
+2. **Docker build and HTTP integration** — после успешной первой job проверяет Compose-конфигурацию, собирает все Docker-образы, собирает и запускает отдельный Docker target `tests`, поднимает приложение целиком и запускает `scripts/smoke.py --compose` через Nginx. В конце контейнеры останавливаются даже при ошибке проверки.
+
+JUnit-отчёт pytest и `accuracy-report.md` прикладываются к запуску workflow как artifact `test-reports` (хранятся 14 дней). Ошибка на любом обязательном этапе делает CI красным и блокирует успешное завершение workflow.
+
+### Запустить те же проверки локально
+
+Из корня проекта с активированным venv и установленными dev-зависимостями:
+
+```bash
+python -m pip install -r requirements-dev.lock
+python -m pip check
+python -m compileall -q services shared scripts tests
+python -m pytest -q
+python -m scripts.verify_accuracy --report accuracy-report.md
+node --experimental-default-type=module scripts/check_assistant_ui_logic.mjs
+node --experimental-default-type=module scripts/check_analysis_ui_logic.mjs
+```
+
+Для проверки именно Docker-поставки дополнительно выполните:
+
+```bash
+docker compose config --quiet
+docker compose build --parallel
+docker build --target tests -t well-model-builder-tests:local .
+docker run --rm well-model-builder-tests:local
+NGINX_PORT=18000 docker compose up -d --build --wait
+docker compose exec -T backend python scripts/smoke.py --compose
+docker compose down --remove-orphans --volumes
+```
+
+На Windows PowerShell последнюю команду запуска с переменной окружения выполните так:
+
+```powershell
+$env:NGINX_PORT = "18000"
+docker compose up -d --build --wait
+```
+
+Браузерный Playwright-прогон `scripts/check_assistant_ui.py` оставлен дополнительной ручной проверкой: ему нужны Playwright и установленный Chromium. Проверка живой LLM также выполняется отдельно на машине, где настроен выбранный провайдер; CI намеренно не обращается к платной/внешней модели.
+
+---
+
 ## Проверка точности
 
 Из корня распакованного проекта выполните в PowerShell с Python 3.12:
@@ -48,7 +96,7 @@ py -3.12 -m venv .venv
 
 Если окружение проекта уже готово, достаточно последней команды. Для Linux или macOS используйте `python3.12` и `.venv/bin/python`. Команда запускает unittest, поднимает отдельные процессы IPR, VLP, Nodal и backend на свободных локальных портах, ждёт health, отправляет реальные HTTP-запросы, записывает [таблицу проверки](accuracy-report.md) и останавливает процессы. Можно оставить дашборд открытым. Код завершения 0 означает, что все запрошенные проверки пройдены. Код 1 и строки FAIL указывают на ошибку.
 
-В текущем архиве 63 автотеста. В повторном контрольном прогоне на Python 3.13.5 с уже установленными в проверочной среде зависимостями все 63 теста прошли; `scripts.verify_accuracy` завершился с результатом 129 OK / 0 FAIL. Отчёт охватывает аналитические, HTTP- и E2E-проверки, включая сверку well_01. Для воспроизводимой установки на другой машине используйте Python 3.12 и закреплённые зависимости из `requirements.lock` / `requirements-dev.lock`. [Сравнение исходной и обновлённой моделей](docs/well_01_comparison.md).
+В текущем архиве `pytest -q` собирает 136 тестов (186 subtests); отдельный unittest-набор, который также запускает `scripts.verify_accuracy`, содержит 63 теста. Контрольный прогон: 136 passed / 186 subtests passed, а `scripts.verify_accuracy` завершился с результатом 129 OK / 0 FAIL. Отчёт охватывает аналитические, HTTP- и E2E-проверки, включая сверку well_01. Те же проверки автоматически запускаются в GitHub Actions при `push` и `pull_request` — подробности см. в разделе «CI: автоматическая проверка GitHub Actions». Для воспроизводимой установки используйте Python 3.12 и закреплённые зависимости из `requirements.lock` / `requirements-dev.lock`. [Сравнение исходной и обновлённой моделей](docs/well_01_comparison.md).
 
 **Откуда взялся численный контроль.** В водяном примере пластовое давление 30 атм, PI = 0,1 м³/(сут·атм), устьевое давление 10 атм. Вертикальная глубина 110 м, длины участков 100 и 50 м, диаметры 0,062 и 0,100 м. При дебитах 0–4 м³/сут течение ламинарное. Независимые формулы в проверке задают IPR как `p = 30 − 10q` и VLP как `p = p₀ + kq`, где `p₀ = 10 + ρg·110/101325`, а `k = 128μ·(100/0,062⁴ + 50/0,100⁴)/(π·86400·101325)`. Здесь ρ = 1000 кг/м³ и μ = 0,001 Па·с. Решение двух уравнений даёт эталон E2E. Для каждого ненулевого значения сравнивается `100 × |факт − эталон| / |эталон|`. Предел включён, 5 % для каждого сервиса и 10 % для обеих координат E2E. Для нулевого эталона принято точное совпадение с нулём, в таблице показано абсолютное отклонение в единицах координаты.
 
@@ -662,6 +710,8 @@ $env:LLM_TIMEOUT = "120"
 | `frontend/` | Форма параметров, график IPR/VLP, рабочая точка и страница состояния сервисов. |
 | `tests/`, `scripts/`, `examples/` | Проверки контрактов, запуск процессов, проверка портов и пример запроса. |
 | `requirements.lock`, `requirements-dev.lock` | Закреплённые версии Python-зависимостей приложения и тестов. |
+
+**Точность отображения:** координаты итоговой рабочей точки (дебит и забойное давление) в Dashboard, подсказке графика, ответах Well AI, сценариях и кратком отчёте показываются с двумя знаками после запятой. Это только форматирование интерфейса: расчёты, JSON API, кривые IPR/VLP и исходные числовые значения сохраняют полную точность.
 
 ## Well v7 — интерфейс и сценарии (этап 4 ассистента)
 

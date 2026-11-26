@@ -131,12 +131,12 @@ def scenario_answer(data):
     def point(row):
         if not row['calculation']: return 'рабочая точка не получена: '+row['error']
         p=row['calculation']['operating_point']
-        return f"дебит {p['q_liq']:.6g} м³/сут, забойное давление {p['p_wf']:.6g} атм"
+        return f"дебит {p['q_liq']:.2f} м³/сут, забойное давление {p['p_wf']:.2f} атм"
     text = f"Сравнение режимов по параметру «{data['label']}». Базовый режим: {point(data['baseline'])}."
     for row in data['rows']:
         text += f"\n{row['value']:.6g} {data['unit']}: {point(row)}."
         if row['delta']:
-            text+=f" Изменение дебита: {row['delta']['q_liq']:+.6g} м³/сут; давления: {row['delta']['p_wf']:+.6g} атм."
+            text+=f" Изменение дебита: {row['delta']['q_liq']:+.2f} м³/сут; давления: {row['delta']['p_wf']:+.2f} атм."
     if data['best_index'] is not None:
         row=data['rows'][data['best_index']]
         text+=f"\nЛучший среди проверенных вариантов: {row['value']:.6g} {data['unit']}. Это дискретный подбор, не гарантированный глобальный оптимум."

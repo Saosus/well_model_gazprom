@@ -1,3 +1,5 @@
+import {formatOperatingPoint} from "./number-format.js";
+
 const ns = "http://www.w3.org/2000/svg";
 
 function element(name, attributes, label) {
@@ -21,9 +23,6 @@ function tick(value) {
   return value && (value < 0.001 || value >= 1e6) ? value.toExponential(0) : tickLabel.format(value);
 }
 
-const valueLabel = new Intl.NumberFormat("ru-RU", {
-  minimumFractionDigits: 2, maximumFractionDigits: 2,
-});
 
 function badge(parent, width) {
   const group = element("g", {});
@@ -37,7 +36,7 @@ function badge(parent, width) {
   parent.append(group);
   return (x, y, value) => {
     group.setAttribute("transform", `translate(${x} ${y})`);
-    label.textContent = valueLabel.format(value);
+    label.textContent = formatOperatingPoint(value);
   };
 }
 
@@ -51,7 +50,7 @@ function addHover(frame, svg, bounds, curves, point, q, p, pressureWidth) {
   const vertical = element("line", {...guide, y1: top, y2: bottom});
   const dot = element("circle", {r: 3.5, stroke: "white", "stroke-width": 1.5});
   overlay.append(horizontal, vertical, dot);
-  const flowWidth = valueLabel.format(q.end).length * 8 + 10;
+  const flowWidth = formatOperatingPoint(q.end).length * 8 + 10;
   const showPressure = badge(overlay, pressureWidth);
   const showFlow = badge(overlay, flowWidth);
   frame.append(area, overlay);
@@ -150,7 +149,7 @@ export function drawChart(svg, result, reference = null) {
     }
     const bp=reference.operating_point;
     const baseMarker=element("circle",{cx:x(bp.q_liq),cy:y(bp.p_wf),r:6,fill:"white",stroke:"var(--point)","stroke-width":2});
-    baseMarker.append(element("title",{},`Базовая точка · ${bp.q_liq} м³/сут · ${bp.p_wf} атм`)); frame.append(baseMarker);
+    baseMarker.append(element("title",{},`Базовая точка · ${formatOperatingPoint(bp.q_liq)} м³/сут · ${formatOperatingPoint(bp.p_wf)} атм`)); frame.append(baseMarker);
   }
   const curves = [];
   for (const [name, curve, style] of [
@@ -163,7 +162,7 @@ export function drawChart(svg, result, reference = null) {
     frame.append(element("polyline", {"aria-label": name, points, fill: "none", "stroke-width": 3, "stroke-linejoin": "round", ...style}));
   }
   const marker = element("circle", {cx: x(point.q_liq), cy: y(point.p_wf), r: 6.5, fill: "var(--point)", stroke: "white", "stroke-width": 2});
-  marker.append(element("title", {}, `Рабочая точка · ${point.q_liq} м³/сут · ${point.p_wf} атм`));
+  marker.append(element("title", {}, `Рабочая точка · ${formatOperatingPoint(point.q_liq)} м³/сут · ${formatOperatingPoint(point.p_wf)} атм`));
   frame.append(marker);
   addHover(frame, svg, {left, right, top, bottom, width}, curves, {
     x: x(point.q_liq), y: y(point.p_wf), flow: point.q_liq, pressure: point.p_wf,

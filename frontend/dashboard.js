@@ -4,6 +4,7 @@ import {applyParameters, requestBody, renderIssues, resetSurvey} from "./paramet
 import {drawChart} from "./chart.js";
 import {initAnalysis, exportReport} from "./analysis.js";
 import {initScenarios} from "./scenarios.js";
+import {formatOperatingPoint} from "./number-format.js";
 
 const form = document.querySelector("#parameters");
 const chart = document.querySelector("#chart");
@@ -13,7 +14,6 @@ const button = document.querySelector("#calculate");
 const flow = document.querySelector("#flow");
 const pressure = document.querySelector("#pressure");
 const endpoint = serviceUrl("backend", "/api/calculate");
-const format = new Intl.NumberFormat("ru-RU", {maximumFractionDigits: 5});
 let current = null;
 let displayed = null;
 let reportSnapshot = null;
@@ -143,8 +143,8 @@ function renderResult(result,parameters,issues=[]) {
   chart.removeAttribute("hidden");
   drawChart(chart, result);
   displayed = result;
-  flow.textContent = format.format(point.q_liq);
-  pressure.textContent = format.format(point.p_wf);
+  flow.textContent = formatOperatingPoint(point.q_liq);
+  pressure.textContent = formatOperatingPoint(point.p_wf);
 }
 
 function assistantIssues(report) {
