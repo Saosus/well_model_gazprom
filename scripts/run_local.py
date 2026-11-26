@@ -1,8 +1,4 @@
-<<<<<<< HEAD
-"""Запустить сервисы отдельными процессами на локальной машине с Python 3.12."""
-=======
 """Запустить Well Model Builder отдельными процессами без Docker/Podman."""
->>>>>>> 2cf8178 (fix python launch option)
 
 import argparse
 import json
@@ -11,31 +7,6 @@ import subprocess
 import sys
 import time
 from pathlib import Path
-<<<<<<< HEAD
-
-
-ROOT = Path(__file__).resolve().parents[1]
-API_PORTS = {"ipr": 8003, "vlp": 8002, "nodal": 8004, "backend": 8080}
-
-
-def run(core_only: bool, backend_port: int = 8080) -> None:
-    commands = {
-        name: [sys.executable, "-m", "uvicorn", f"services.{name}.main:app", "--host", "127.0.0.1", "--port", str(port), "--no-use-colors"]
-        for name, port in {**API_PORTS, "backend": backend_port}.items() if not (core_only and name == "backend")
-    }
-    if not core_only:
-        commands["frontend"] = [
-            sys.executable, "-m", "uvicorn", "scripts.local_frontend:app", "--host", "127.0.0.1",
-            "--port", "3000", "--no-use-colors",
-        ]
-    processes = {}
-    try:
-        if not core_only:
-            print(f"Backend: http://127.0.0.1:{backend_port}/docs   Страница: http://127.0.0.1:3000/", flush=True)
-        for name, command in commands.items():
-            processes[name] = subprocess.Popen(command, cwd=ROOT, env={**os.environ, "BACKEND_PORT": str(backend_port)})
-        print("Запуск сервисов. Для остановки нажмите Ctrl+C.", flush=True)
-=======
 from urllib.error import URLError
 from urllib.request import ProxyHandler, Request, build_opener
 
@@ -161,7 +132,6 @@ def run(core_only: bool, backend_port: int = DEFAULT_BACKEND_PORT, host: str = "
                 print("Сервер слушает все интерфейсы. Для доступа с другой машины используйте IP этого узла.", flush=True)
         print("Для остановки нажмите Ctrl+C.", flush=True)
 
->>>>>>> 2cf8178 (fix python launch option)
         while True:
             for name, process in processes.items():
                 if process.poll() is not None:
@@ -181,16 +151,6 @@ def run(core_only: bool, backend_port: int = DEFAULT_BACKEND_PORT, host: str = "
                 process.wait()
 
 
-<<<<<<< HEAD
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--core", action="store_true", help="запустить только IPR, VLP и Nodal")
-    parser.add_argument("--backend-port", type=int, default=8080, help="порт backend для локального запуска")
-    options = parser.parse_args()
-    if not 1 <= options.backend_port <= 65535 or options.backend_port in (3000, 8002, 8003, 8004):
-        parser.error("Выберите свободный порт backend от 1 до 65535, отдельный от остальных сервисов.")
-    run(options.core, options.backend_port)
-=======
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--core", action="store_true", help="запустить только IPR, VLP и Nodal")
@@ -215,4 +175,3 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
->>>>>>> 2cf8178 (fix python launch option)

@@ -2,11 +2,7 @@
 
 Версия с формулами базы знаний, на основе этапа 08 хакатона «Разработка системы модели скважины». Дашборд строит IPR и VLP и показывает рабочую точку. Автотесты проверяют расчётные сервисы по отдельности и весь путь от параметров скважины до ответа backend.
 
-<<<<<<< HEAD
-Для запуска сайта через Nginx см. [Запуск в Docker](#запуск-в-docker-через-nginx).
-=======
 Для запуска без контейнеров используйте раздел [Нативный запуск через Python + venv](#нативный-запуск-без-dockerpodman-python--venv). Для контейнерного запуска через Nginx см. [Запуск в Docker](#запуск-в-docker-через-nginx).
->>>>>>> 2cf8178 (fix python launch option)
 
 ## Well AI на сайте (Windows и Docker Desktop)
 
@@ -424,26 +420,6 @@ Python 3.12.14, команда `python -m unittest discover -s tests -v` — 47 
 
 </details>
 
-<<<<<<< HEAD
-## Запуск на Windows без Docker
-
-Понадобится Python 3.12 с доступом к PyPI для установки зависимостей. Для статического frontend достаточно браузера. Команды выполняются в PowerShell из корня проекта.
-
-```powershell
-py -3.12 -m venv .venv
-.\.venv\Scripts\python.exe -m pip install -r requirements-dev.lock
-.\.venv\Scripts\python.exe -m pytest -q
-.\.venv\Scripts\python.exe scripts/run_local.py
-```
-
-Оставьте окно с сервисами открытым. Во втором окне PowerShell перейдите в тот же каталог и выполните проверку.
-
-```powershell
-.\.venv\Scripts\python.exe scripts/smoke.py
-```
-
-Для трёх сервисов укажите `--core` в командах запуска и проверки. Ctrl+C в первом окне останавливает дочерние процессы. На Linux и macOS используйте `python3.12 -m venv .venv` и `.venv/bin/python` вместо пути Windows. При нативном запуске Swagger UI загружает JS и CSS с CDN. Схемы `/openapi.json`, страница состояния и HTTP-маршруты доступны локально.
-=======
 ## Нативный запуск без Docker/Podman (Python + venv)
 
 Этот режим запускает все пять компонентов обычными Python-процессами: IPR, VLP, Nodal, Backend и локальный HTTP-сервер Frontend. Docker, Podman, Compose и системный Nginx не требуются. Режим предназначен для локальной демонстрации, разработки и проверки на машине, где нельзя устанавливать контейнерный runtime.
@@ -672,7 +648,6 @@ $env:LLM_TIMEOUT = "120"
 - Swagger UI на нативном запуске загружает статические JS/CSS с CDN jsDelivr. При отключённом Интернете сами API и Dashboard продолжают работать, но интерактивный Swagger UI может не загрузить оформление и скрипты. В Docker эти файлы копируются в образ из стадии `swagger_assets`.
 - Для постоянного серверного запуска используйте менеджер процессов ОС (например, systemd на Linux/Windows Service) либо контейнерный вариант. Обычный `run_local.py` — foreground launcher: закрытие терминала останавливает приложение.
 - Расчёты не зависят от внешних API. LLM — дополнительная функция; отсутствие модели или ключа не блокирует IPR, VLP, Nodal и общий расчёт.
->>>>>>> 2cf8178 (fix python launch option)
 
 ## Структура для продолжения разработки
 
