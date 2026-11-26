@@ -2,7 +2,11 @@
 
 Версия с формулами базы знаний, на основе этапа 08 хакатона «Разработка системы модели скважины». Дашборд строит IPR и VLP и показывает рабочую точку. Автотесты проверяют расчётные сервисы по отдельности и весь путь от параметров скважины до ответа backend.
 
+<<<<<<< HEAD
 Для запуска сайта через Nginx см. [Запуск в Docker](#запуск-в-docker-через-nginx).
+=======
+Для запуска без контейнеров используйте раздел [Нативный запуск через Python + venv](#нативный-запуск-без-dockerpodman-python--venv). Для контейнерного запуска через Nginx см. [Запуск в Docker](#запуск-в-docker-через-nginx).
+>>>>>>> 2cf8178 (fix python launch option)
 
 ## Well AI на сайте (Windows и Docker Desktop)
 
@@ -48,7 +52,7 @@ py -3.12 -m venv .venv
 
 Если окружение проекта уже готово, достаточно последней команды. Для Linux или macOS используйте `python3.12` и `.venv/bin/python`. Команда запускает unittest, поднимает отдельные процессы IPR, VLP, Nodal и backend на свободных локальных портах, ждёт health, отправляет реальные HTTP-запросы, записывает [таблицу проверки](accuracy-report.md) и останавливает процессы. Можно оставить дашборд открытым. Код завершения 0 означает, что все запрошенные проверки пройдены. Код 1 и строки FAIL указывают на ошибку.
 
-На Python 3.12.14 прошли 58 автотестов. Отчёт содержит 129 успешных строк с учётом аналитических и HTTP-проверок. В том числе по архиву well_01 сверены 88 чисел. [Сравнение исходной и обновлённой моделей](docs/well_01_comparison.md).
+В текущем архиве 63 автотеста. В повторном контрольном прогоне на Python 3.13.5 с уже установленными в проверочной среде зависимостями все 63 теста прошли; `scripts.verify_accuracy` завершился с результатом 129 OK / 0 FAIL. Отчёт охватывает аналитические, HTTP- и E2E-проверки, включая сверку well_01. Для воспроизводимой установки на другой машине используйте Python 3.12 и закреплённые зависимости из `requirements.lock` / `requirements-dev.lock`. [Сравнение исходной и обновлённой моделей](docs/well_01_comparison.md).
 
 **Откуда взялся численный контроль.** В водяном примере пластовое давление 30 атм, PI = 0,1 м³/(сут·атм), устьевое давление 10 атм. Вертикальная глубина 110 м, длины участков 100 и 50 м, диаметры 0,062 и 0,100 м. При дебитах 0–4 м³/сут течение ламинарное. Независимые формулы в проверке задают IPR как `p = 30 − 10q` и VLP как `p = p₀ + kq`, где `p₀ = 10 + ρg·110/101325`, а `k = 128μ·(100/0,062⁴ + 50/0,100⁴)/(π·86400·101325)`. Здесь ρ = 1000 кг/м³ и μ = 0,001 Па·с. Решение двух уравнений даёт эталон E2E. Для каждого ненулевого значения сравнивается `100 × |факт − эталон| / |эталон|`. Предел включён, 5 % для каждого сервиса и 10 % для обеих координат E2E. Для нулевого эталона принято точное совпадение с нулём, в таблице показано абсолютное отклонение в единицах координаты.
 
@@ -420,6 +424,7 @@ Python 3.12.14, команда `python -m unittest discover -s tests -v` — 47 
 
 </details>
 
+<<<<<<< HEAD
 ## Запуск на Windows без Docker
 
 Понадобится Python 3.12 с доступом к PyPI для установки зависимостей. Для статического frontend достаточно браузера. Команды выполняются в PowerShell из корня проекта.
@@ -438,6 +443,236 @@ py -3.12 -m venv .venv
 ```
 
 Для трёх сервисов укажите `--core` в командах запуска и проверки. Ctrl+C в первом окне останавливает дочерние процессы. На Linux и macOS используйте `python3.12 -m venv .venv` и `.venv/bin/python` вместо пути Windows. При нативном запуске Swagger UI загружает JS и CSS с CDN. Схемы `/openapi.json`, страница состояния и HTTP-маршруты доступны локально.
+=======
+## Нативный запуск без Docker/Podman (Python + venv)
+
+Этот режим запускает все пять компонентов обычными Python-процессами: IPR, VLP, Nodal, Backend и локальный HTTP-сервер Frontend. Docker, Podman, Compose и системный Nginx не требуются. Режим предназначен для локальной демонстрации, разработки и проверки на машине, где нельзя устанавливать контейнерный runtime.
+
+**Требования**
+
+- CPython 3.12 (рекомендуемая версия; код использует синтаксис Python 3.12). На 64-битных Windows, Linux и macOS зависимости устанавливаются из закреплённого lock-файла через pip.
+- Доступ к PyPI на этапе первой установки зависимостей. После установки venv приложение может запускаться без доступа к PyPI.
+- Для интерфейса нужен современный браузер. Для самой расчётной части не нужны LLM, Ollama, база данных, Docker или внешние API.
+- Node.js нужен только для JavaScript-проверок из раздела «Тесты», не для работы приложения.
+
+Все команды запуска выполняются из корневой папки распакованного проекта — там, где находятся `requirements.lock`, `scripts/` и `services/`.
+
+### Windows 10/11 · PowerShell
+
+Создайте виртуальное окружение и установите runtime-зависимости:
+
+```powershell
+py -3.12 -m venv .venv
+.\.venv\Scripts\python.exe -m pip install --upgrade pip
+.\.venv\Scripts\python.exe -m pip install -r requirements.lock
+```
+
+Запустите приложение:
+
+```powershell
+.\.venv\Scripts\python.exe scripts/run_local.py
+```
+
+После появления сообщения `Все пять компонентов Well Model Builder готовы` откройте:
+
+- Dashboard: `http://127.0.0.1:3000/`
+- Страница состояния сервисов: `http://127.0.0.1:3000/services.html`
+- Backend Swagger: `http://127.0.0.1:8080/docs`
+- IPR Swagger: `http://127.0.0.1:8003/docs`
+- VLP Swagger: `http://127.0.0.1:8002/docs`
+- Nodal Swagger: `http://127.0.0.1:8004/docs`
+
+Окно PowerShell с `run_local.py` должно оставаться открытым. Нажмите `Ctrl+C`, чтобы остановить все пять процессов.
+
+### Linux · Debian/Ubuntu/Arch и macOS · Bash/Zsh
+
+Убедитесь, что доступен Python 3.12 и модуль `venv`. Например, проверьте:
+
+```bash
+python3.12 --version
+python3.12 -m venv --help
+```
+
+Создайте окружение и установите зависимости:
+
+```bash
+python3.12 -m venv .venv
+.venv/bin/python -m pip install --upgrade pip
+.venv/bin/python -m pip install -r requirements.lock
+```
+
+Запустите все компоненты:
+
+```bash
+.venv/bin/python scripts/run_local.py
+```
+
+Откройте `http://127.0.0.1:3000/`. Для остановки нажмите `Ctrl+C` в терминале с запущенным приложением.
+
+Если команда `python3.12` отсутствует, установите CPython 3.12 средствами своей ОС или используйте официальный дистрибутив Python. Не используйте Python 3.11: в коде Backend есть синтаксис параметризованных функций, введённый в Python 3.12.
+
+### Что запускает run_local.py
+
+Скрипт стартует каждый компонент отдельным процессом Uvicorn и ждёт, пока каждый ответит на health-check (Frontend проверяется HTTP-запросом к `/`). Если один из процессов не запустится или завершится, скрипт сообщает, какой компонент не готов, и останавливает остальные процессы.
+
+| Компонент | Адрес при стандартном запуске | Назначение |
+| --- | --- | --- |
+| Frontend | `127.0.0.1:3000` | Статические файлы Dashboard через `scripts/local_frontend.py` |
+| Backend | `127.0.0.1:8080` | Оркестратор, Well AI, сценарии, анализ и API |
+| VLP | `127.0.0.1:8002` | Кривая подъёма и PVT |
+| IPR | `127.0.0.1:8003` | Кривая притока |
+| Nodal | `127.0.0.1:8004` | Поиск рабочей точки |
+
+В нативном режиме Frontend получает фактический порт Backend из `/backend-port.js` и обращается к Backend/IPR/VLP/Nodal напрямую по их локальным портам. Поэтому все пять процессов должны работать одновременно. На странице `services.html` можно проверить их health, а `scripts/smoke.py` проверяет HTTP-контракты и сквозной расчёт.
+
+### Проверка нативного запуска
+
+Оставьте `run_local.py` работающим. Откройте второе окно терминала в той же папке проекта.
+
+Windows PowerShell:
+
+```powershell
+.\.venv\Scripts\python.exe scripts/smoke.py
+.\.venv\Scripts\python.exe -m scripts.verify_accuracy
+```
+
+Linux/macOS:
+
+```bash
+.venv/bin/python scripts/smoke.py
+.venv/bin/python -m scripts.verify_accuracy
+```
+
+`scripts/smoke.py` проверяет health и прямые запросы к трём расчётным сервисам, Backend и Frontend. `scripts.verify_accuracy` самостоятельно поднимает временные HTTP-процессы на свободных локальных портах, выполняет unit/HTTP/E2E-проверки и обновляет `accuracy-report.md`; для него не нужно держать основной `run_local.py` запущенным.
+
+### Установка тестовых зависимостей
+
+Для разработки и запуска pytest установите дополнительный lock-файл. Он включает `requirements.lock`, поэтому отдельная установка runtime-зависимостей не требуется, если вы сразу выбираете dev-вариант:
+
+Windows:
+
+```powershell
+.\.venv\Scripts\python.exe -m pip install -r requirements-dev.lock
+.\.venv\Scripts\python.exe -m pytest -q
+.\.venv\Scripts\python.exe -m unittest discover -s tests -v
+```
+
+Linux/macOS:
+
+```bash
+.venv/bin/python -m pip install -r requirements-dev.lock
+.venv/bin/python -m pytest -q
+.venv/bin/python -m unittest discover -s tests -v
+```
+
+JavaScript-проверки дополнительно требуют Node.js:
+
+```bash
+node --experimental-default-type=module scripts/check_assistant_ui_logic.mjs
+node --experimental-default-type=module scripts/check_analysis_ui_logic.mjs
+```
+
+Опциональный браузерный прогон `scripts/check_assistant_ui.py` требует отдельно установленного Playwright и браузера Chromium; это не runtime-зависимость приложения.
+
+### Только расчётные сервисы
+
+Если нужен только автоматический тест IPR/VLP/Nodal без Dashboard и Backend, запустите:
+
+Windows:
+
+```powershell
+.\.venv\Scripts\python.exe scripts/run_local.py --core
+.\.venv\Scripts\python.exe scripts/smoke.py --core
+```
+
+Linux/macOS:
+
+```bash
+.venv/bin/python scripts/run_local.py --core
+.venv/bin/python scripts/smoke.py --core
+```
+
+В режиме `--core` запускаются только три расчётных API на портах 8002, 8003 и 8004.
+
+### Если порт Backend 8080 занят
+
+Порт Backend можно изменить. Frontend автоматически получает его из `backend-port.js` и использует выбранный порт. Например, для `18080`:
+
+Windows:
+
+```powershell
+.\.venv\Scripts\python.exe scripts/run_local.py --backend-port 18080
+# во втором окне
+.\.venv\Scripts\python.exe scripts/smoke.py --backend-port 18080
+```
+
+Linux/macOS:
+
+```bash
+.venv/bin/python scripts/run_local.py --backend-port 18080
+# во втором окне
+.venv/bin/python scripts/smoke.py --backend-port 18080
+```
+
+Порты IPR/VLP/Nodal и Frontend закреплены: 8003/8002/8004 и 3000. Если один из них занят, остановите конфликтующий процесс перед запуском.
+
+### Доступ к Dashboard с другой машины в локальной сети
+
+По умолчанию все процессы слушают только `127.0.0.1`, поэтому доступ с других компьютеров закрыт. Для временной демонстрации внутри доверенной LAN можно явно открыть listener на всех интерфейсах:
+
+Linux/macOS:
+
+```bash
+export FRONTEND_ORIGINS="http://192.168.1.50:3000"
+.venv/bin/python scripts/run_local.py --host 0.0.0.0
+```
+
+Windows PowerShell:
+
+```powershell
+$env:FRONTEND_ORIGINS = "http://192.168.1.50:3000"
+.\.venv\Scripts\python.exe scripts/run_local.py --host 0.0.0.0
+```
+
+Замените `192.168.1.50` на IP компьютера, с которого открывается Dashboard. На сервере нужно разрешить входящие TCP-подключения к портам `3000`, `8080`, `8002`, `8003` и `8004` только из вашей локальной сети. Frontend обращается к API напрямую на эти порты, поэтому одного порта 3000 недостаточно. При выбранном `--backend-port` откройте вместо 8080 этот порт и передайте тот же параметр `scripts/smoke.py`.
+
+**Не открывайте этот режим напрямую в Интернет.** Нативный launcher не настраивает TLS, авторизацию или reverse proxy; для публичного размещения используйте Docker Compose с Nginx либо настройте отдельный системный reverse proxy и контроль доступа. После LAN-демонстрации вернитесь к стандартному запуску без `--host 0.0.0.0`.
+
+### Well AI при нативном запуске (необязательно)
+
+Расчётная часть, Dashboard, импорт файлов и отчёты работают без LLM-ключа. Для Well AI нужен отдельно запущенный Ollama или доступный OpenAI-совместимый API. При нативном запуске переменные передаются в окружение процесса; `scripts/run_local.py` **не загружает `.env` автоматически**. Файл `.env` и адреса вида `http://ipr:8003` предназначены для Docker Compose. Не используйте Docker-адрес `host.docker.internal` в нативном режиме, если провайдер модели работает на той же машине.
+
+Пример для локальной Ollama на той же машине:
+
+Linux/macOS:
+
+```bash
+export LLM_BASE_URL="http://127.0.0.1:11434/v1"
+export LLM_MODEL="qwen3:8b"
+export LLM_API_KEY="ollama"
+export LLM_TIMEOUT="120"
+.venv/bin/python scripts/run_local.py
+```
+
+Windows PowerShell:
+
+```powershell
+$env:LLM_BASE_URL = "http://127.0.0.1:11434/v1"
+$env:LLM_MODEL = "qwen3:8b"
+$env:LLM_API_KEY = "ollama"
+$env:LLM_TIMEOUT = "120"
+.\.venv\Scripts\python.exe scripts/run_local.py
+```
+
+Сначала установите и запустите Ollama, затем загрузите модель командой `ollama pull qwen3:8b`. Для удалённого API укажите его OpenAI-совместимый Base URL, точное имя модели и ключ. Не записывайте секреты в README, Git или релизный ZIP.
+
+### Ограничения нативного режима
+
+- Вместо Nginx используется небольшой FastAPI/StaticFiles сервер из `scripts/local_frontend.py`; он отдаёт ту же папку `frontend/`. Все API запускаются отдельными процессами Uvicorn.
+- Swagger UI на нативном запуске загружает статические JS/CSS с CDN jsDelivr. При отключённом Интернете сами API и Dashboard продолжают работать, но интерактивный Swagger UI может не загрузить оформление и скрипты. В Docker эти файлы копируются в образ из стадии `swagger_assets`.
+- Для постоянного серверного запуска используйте менеджер процессов ОС (например, systemd на Linux/Windows Service) либо контейнерный вариант. Обычный `run_local.py` — foreground launcher: закрытие терминала останавливает приложение.
+- Расчёты не зависят от внешних API. LLM — дополнительная функция; отсутствие модели или ключа не блокирует IPR, VLP, Nodal и общий расчёт.
+>>>>>>> 2cf8178 (fix python launch option)
 
 ## Структура для продолжения разработки
 
