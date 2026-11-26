@@ -113,13 +113,13 @@ function addHover(frame, svg, bounds, curves, point, q, p, pressureWidth) {
   area.addEventListener("pointercancel", hide);
 }
 
-export function drawChart(svg, result) {
+export function drawChart(svg, result, reference = null) {
   const {width, height} = svg.parentElement.getBoundingClientRect();
   if (width < 1 || height < 1) return;
   const top = 24, right = width - 25, bottom = height - 56;
   const {ipr, vlp, operating_point: point} = result;
-  const q = axis(Math.max(...ipr.q_liq, ...vlp.q_liq, point.q_liq), width < 430 ? 4 : 6);
-  const p = axis(Math.max(...ipr.p_wf, ...vlp.p_wf, point.p_wf), 5);
+  const q = axis(Math.max(...ipr.q_liq, ...vlp.q_liq, point.q_liq, ...(reference ? [...reference.ipr.q_liq, ...reference.vlp.q_liq, reference.operating_point.q_liq] : [])), width < 430 ? 4 : 6);
+  const p = axis(Math.max(...ipr.p_wf, ...vlp.p_wf, point.p_wf, ...(reference ? [...reference.ipr.p_wf, ...reference.vlp.p_wf, reference.operating_point.p_wf] : [])), 5);
   const pressureWidth = valueLabel.format(p.end).length * 8 + 10;
   const left = Math.max(60, pressureWidth + 26);
   const x = value => left + value / q.end * (right - left);
@@ -144,6 +144,14 @@ export function drawChart(svg, result) {
   const mid = (top + bottom) / 2;
   label(16, mid, "Давление p_wf, атм", "middle", {transform: `rotate(-90 16 ${mid})`});
 
+  if (reference) {
+    for (const [name, curve, color] of [["IPR", reference.ipr, "var(--ipr)"], ["VLP", reference.vlp, "var(--vlp)"]]) {
+      frame.append(element("polyline", {"aria-label": "Базовая " + name, points:curve.q_liq.map((v,i)=>`${x(v)},${y(curve.p_wf[i])}`).join(" "), fill:"none", stroke:color, "stroke-width":2, "stroke-dasharray":"3 5", opacity:.45}));
+    }
+    const bp=reference.operating_point;
+    const baseMarker=element("circle",{cx:x(bp.q_liq),cy:y(bp.p_wf),r:6,fill:"white",stroke:"var(--point)","stroke-width":2});
+    baseMarker.append(element("title",{},`Базовая точка · ${bp.q_liq} м³/сут · ${bp.p_wf} атм`)); frame.append(baseMarker);
+  }
   const curves = [];
   for (const [name, curve, style] of [
     ["IPR", ipr, {stroke: "var(--ipr)"}],

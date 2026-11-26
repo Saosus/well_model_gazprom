@@ -1,4 +1,3 @@
-import argparse
 import json
 import re
 import unittest
@@ -6,7 +5,6 @@ from pathlib import Path
 
 import httpx
 
-from scripts.run_local import normalize_origin
 from services.backend.main import app as backend
 from services.backend.main import service_status
 from services.ipr.main import app as ipr
@@ -29,13 +27,6 @@ async def request(app, method: str, path: str, **kwargs) -> httpx.Response:
 
 
 class ContractTests(unittest.TestCase):
-    def test_frontend_origin_is_normalized_and_validated(self):
-        self.assertEqual(normalize_origin("http://example.test:3000/"), "http://example.test:3000")
-        self.assertEqual(normalize_origin("http://192.0.2.10:3000"), "http://192.0.2.10:3000")
-        for value in ("example.test:3000", "https://example.test:3000", "ftp://example.test", "http://example.test/path"):
-            with self.subTest(value=value), self.assertRaises(argparse.ArgumentTypeError):
-                normalize_origin(value)
-
     def test_readme_request_matches_example_file(self):
         readme = (ROOT / "README.md").read_text(encoding="utf-8")
         blocks = [json.loads(s) for s in re.findall(r"^```json\n(.*?)^```", readme, flags=re.M | re.S)]

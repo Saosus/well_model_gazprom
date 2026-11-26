@@ -8,6 +8,7 @@ from fastapi.openapi.docs import get_swagger_ui_html
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
+from shared.validation import detail, domain_issues, schema_issues
 from shared.contracts import ApiError, Health
 
 
@@ -44,10 +45,7 @@ def create_app(service: str, title: str, *, version: str = "0.1.0") -> FastAPI:
     @app.exception_handler(RequestValidationError)
     async def invalid_input(_request: Request, exc: RequestValidationError) -> JSONResponse:
         # Исключаем сырые значения, в том числе NaN/Inf, из тела JSON-ошибки.
-        messages = []
-        for error in exc.errors():
-            location = ".".join(str(part) for part in error["loc"])
-            messages.append(f"{location} — {error['msg']}")
-        return JSONResponse(status_code=422, content={"detail": " | ".join(messages)})
+        issues = schema_issues(exc.errors()) + domain_issues(exc.body, service)
+        return JSONResponse(status_code=422, content={"detail": detail(issues)})
 
     return app

@@ -33,6 +33,11 @@ services:
       VLP_URL: ${VLP_URL:-http://vlp:8002}
       NODAL_URL: ${NODAL_URL:-http://nodal:8004}
       FRONTEND_ORIGINS: ${FRONTEND_ORIGINS:-http://localhost:3000,http://127.0.0.1:3000,http://[::1]:3000}
+      LLM_BASE_URL: ${LLM_BASE_URL:-}
+      LLM_MODEL: ${LLM_MODEL:-}
+      LLM_API_KEY: ${LLM_API_KEY:-}
+      LLM_TIMEOUT: ${LLM_TIMEOUT:-30}
+      LLM_MAX_TOOL_STEPS: ${LLM_MAX_TOOL_STEPS:-6}
     depends_on:
       ipr: {condition: service_healthy}
       vlp: {condition: service_healthy}

@@ -1,6 +1,7 @@
 from fastapi import HTTPException
 
 from services.ipr.model import calculate_ipr
+from shared.validation import detail, issue
 from shared.api import VALIDATION_ERRORS, create_app
 from shared.contracts import Curve, IprRequest
 
@@ -13,4 +14,5 @@ def calculate(request: IprRequest) -> Curve:
     try:
         return calculate_ipr(request)
     except OverflowError as exc:
-        raise HTTPException(status_code=422, detail=str(exc)) from exc
+        msg = "Расчётный дебит превышает численный диапазон. Проверьте пластовое давление и продуктивность в указанных единицах."
+        raise HTTPException(422, detail([issue(["pi", "p_res"], msg)])) from exc

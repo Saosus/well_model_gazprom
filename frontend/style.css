@@ -59,9 +59,9 @@ a { color: var(--accent); font-weight: 600; text-underline-offset: 3px; }
 }
 @media (max-width: 470px) {
   .table-wrap table, .table-wrap tbody { display: block; }
-  thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
-  tbody tr { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; padding: 12px 14px; gap: 8px; }
-  tbody th, tbody td { padding: 0; }
+  .table-wrap thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+  .table-wrap tbody tr { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; padding: 12px 14px; gap: 8px; }
+  .table-wrap tbody th, .table-wrap tbody td { padding: 0; }
   .route { text-align: right; }
   .links { justify-content: flex-end; }
 }

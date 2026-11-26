@@ -60,3 +60,18 @@
   .legend { padding-inline: 15px; gap: 5px 12px; }
   #plot { margin-inline: 5px; }
 }
+.fields label { justify-content: flex-start; }
+.hint { font-size: .72rem; line-height: 1.35; }
+.survey h3 { font-size: .9rem; margin: 5px 0; }
+.survey table { width: 100%; table-layout: fixed; border-collapse: collapse; margin-bottom: 8px; }
+.survey th, .survey td { padding: 4px 2px; vertical-align: top; text-align: left; overflow-wrap: anywhere; }
+.survey th:first-child, .survey td:first-child { width: 2em; }
+.survey th:last-child { width: 2.5em; }
+.survey .remove { padding: 6px 10px; }
+.feedback span { display: block; margin-top: 3px; font-size: .76rem; }
+.error { color: #9d3028; }
+.warning { color: #765300; background: #fff5cd; }
+.field:has([data-warning]) { border: 2px solid #bf920e; }
+.field:has([aria-invalid=true]) { border: 2px solid #b1392e; }
+#validation-summary { margin: 0; padding: 10px 22px; font-size: .83rem; }
+#validation-summary.error { background: #fff0ec; }

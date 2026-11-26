@@ -1,14 +1,17 @@
 import asyncio
 import json
 import os
+import time
 from pathlib import Path
-from typing import Annotated, Literal, TypeVar
+from typing import Annotated, Literal
 
 import httpx
 from fastapi import Body, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import TypeAdapter, ValidationError
 
+from shared.validation import enforce, preview
+from services.backend.assistant.progress import calculation_stages
 from shared.api import VALIDATION_ERRORS, create_app
 from shared.contracts import ApiError, CalculateRequest, CalculateResponse, Curve, NodalResult
 
@@ -19,7 +22,7 @@ SERVICE_URLS = {
 }
 default_origins = "http://localhost:3000,http://127.0.0.1:3000,http://[::1]:3000"
 origins = os.getenv("FRONTEND_ORIGINS", default_origins).split(",")
-app = create_app("backend", "Well Model Builder · Backend", version="0.6.0")
+app = create_app("backend", "Well Model Builder · Backend", version="0.8.0")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[origin.strip() for origin in origins if origin.strip()],
@@ -62,10 +65,7 @@ BACKEND_ERRORS = {
 }
 
 
-T = TypeVar("T")
-
-
-async def post_calculation(
+async def _post_calculation[T](
     client: httpx.AsyncClient, name: str, payload: dict, schema: TypeAdapter[T],
 ) -> T:
     url = f"{SERVICE_URLS[name].rstrip('/')}/{name}/calc"
@@ -92,11 +92,30 @@ async def post_calculation(
         raise HTTPException(502, f"{stage} — ответ не соответствует контракту расчёта.") from exc
 
 
+async def post_calculation[T](client: httpx.AsyncClient, name: str, payload: dict, schema: TypeAdapter[T]) -> T:
+    stages = calculation_stages.get()
+    started = time.monotonic()
+    ok = False
+    try:
+        result = await _post_calculation(client, name, payload, schema)
+        ok = True
+        return result
+    finally:
+        if stages is not None:
+            stages.append({"stage": name.upper(), "ok": ok, "duration_ms": round((time.monotonic()-started)*1000)})
+
+
+@app.post("/api/validate", summary="Проверить параметры без запуска расчёта")
+def validate_inputs(body: Annotated[dict, Body()]) -> dict:
+    return {"issues": preview(body)}
+
+
 @app.post("/api/calculate", response_model=CalculateResponse, responses=BACKEND_ERRORS,
           summary="Получить IPR, VLP и одну рабочую точку")
 async def calculate(request: Annotated[CalculateRequest, Body(openapi_examples={
     "well": {"summary": "Скважина из examples/calculate.json", "value": CALCULATE_EXAMPLE},
 })]) -> CalculateResponse:
+    enforce(request.model_dump(), "backend")
     sampling = request.sampling
     async with httpx.AsyncClient(timeout=httpx.Timeout(60.0, connect=3.0), trust_env=False) as client:
         ipr = await post_calculation(client, "ipr", {
@@ -110,3 +129,15 @@ async def calculate(request: Annotated[CalculateRequest, Body(openapi_examples={
             "ipr": ipr.model_dump(), "vlp": vlp.model_dump(),
         }, NODAL_POINTS)
     return CalculateResponse(ipr=ipr, vlp=vlp, operating_point=points[0])
+
+
+# The assistant uses the same orchestrator as the manual API. No new calculation formulas.
+from services.backend.assistant.routes import make_router
+
+app.include_router(make_router(calculate))
+
+from services.backend.scenarios import make_scenario_router
+app.include_router(make_scenario_router(calculate))
+
+from services.backend.analysis import make_analysis_router
+app.include_router(make_analysis_router(calculate))
