@@ -274,6 +274,26 @@ docker compose ps
 
 Nginx отдаёт файлы из `frontend/` и проксирует API по именам сервисов в сети Compose. Конфигурация входит в образ из [services/backend/nginx.conf](services/backend/nginx.conf). Общие JS и CSS для Swagger доступны по `/_swagger/`. Backend вызывает расчётные сервисы внутри сети.
 
+**Обновление Frontend после изменения JS/CSS**
+
+Frontend включён непосредственно в Docker-образ сервиса `nginx`. Поэтому простого обновления файлов на диске недостаточно: образ Nginx необходимо пересобрать и пересоздать. После обновления Frontend выполните из каталога проекта:
+
+```bash
+docker compose build --no-cache nginx
+docker compose up -d --no-deps --force-recreate nginx
+docker compose ps nginx
+```
+
+Проверить, что браузеру больше не предлагаются старые HTML/JS/CSS, можно так:
+
+```bash
+curl -I http://localhost/
+curl -I http://localhost/dashboard.js
+curl -I http://localhost/number-format.js
+```
+
+В ответах ожидается `Cache-Control: no-store, no-cache, ...`. После этого обновите страницу с очисткой кеша (`Ctrl+Shift+R` в Firefox/Chromium). Если перед приложением стоит внешний Nginx из другого Compose-проекта, пересобирать нужно именно сервис `nginx` Well Model Builder; внешний reverse proxy обычно перезапускать не требуется, если он только проксирует запросы без собственного proxy cache.
+
 **Проверка через Nginx**
 
 ```powershell
@@ -534,6 +554,19 @@ python3.12 -m venv .venv
 Откройте `http://127.0.0.1:3000/`. Для остановки нажмите `Ctrl+C` в терминале с запущенным приложением.
 
 Если команда `python3.12` отсутствует, установите CPython 3.12 средствами своей ОС или используйте официальный дистрибутив Python. Не используйте Python 3.11: в коде Backend есть синтаксис параметризованных функций, введённый в Python 3.12.
+
+### Обновление Frontend при нативном запуске
+
+В режиме Python + venv статические файлы раздаёт `scripts/local_frontend.py`, а не Nginx. Поэтому локальный сервер явно отправляет для HTML, JavaScript и CSS заголовки `Cache-Control: no-store`, `Pragma: no-cache` и `Expires: 0`. URL главного модуля также содержит версию `dashboard.js?v=1.0.0-2dp`, чтобы после обновления пакета браузер не использовал старый JavaScript.
+
+Если вы обновили проект с более ранней версии:
+
+1. Остановите старый `scripts/run_local.py` сочетанием `Ctrl+C`.
+2. Запустите `scripts/run_local.py` из новой папки проекта.
+3. В браузере выполните жёсткое обновление страницы (`Ctrl+Shift+R`).
+4. Для проверки откройте `http://127.0.0.1:3000/dashboard.js?v=1.0.0-2dp`: в ответе должен присутствовать импорт `number-format.js` и вызовы `formatOperatingPoint` для `q_liq` и `p_wf`.
+
+Итоговые карточки показывают два знака после запятой (например, `127,99` и `49,71`). Полная точность расчётов и значений JSON API при этом не меняется.
 
 ### Что запускает run_local.py
 
