@@ -1,0 +1,17 @@
+{
+  "ipr": {
+    "request": "requests/ipr.json",
+    "expected": "expected/ipr.json"
+  },
+  "vlp": {
+    "request": "requests/vlp.json",
+    "expected": "expected/vlp.json"
+  },
+  "nodal": {
+    "request": "requests/nodal.json",
+    "expected": "expected/nodal.json"
+  },
+  "e2e": {
+    "expected": "expected/nodal.json"
+  }
+}

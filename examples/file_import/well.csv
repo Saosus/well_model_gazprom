@@ -1,0 +1,22 @@
+﻿parameter;value;unit
+reservoir.p_res;200;атм
+reservoir.pi;1;м³/(сут·атм)
+reservoir.pb;150;атм
+well.inclinometry.MD;[0, 1000, 1500];м
+well.inclinometry.TVD;[0, 1000, 1100];м
+well.casing.d;0.1;м
+well.tubing.d;0.062;м
+well.tubing.h_mes;1000;м
+well.p_wh;10;атм
+well.geo_grad;3;°C/100 м
+well.h_res;1500;м
+well.roughness;0.0001;доля
+pvt.wct;100;%
+pvt.rp;100;м³/т
+pvt.gamma_oil;0.8;доля
+pvt.gamma_gas;0.7;доля
+pvt.gamma_wat;1.0;доля
+pvt.t_res;90;°C
+sampling.ipr_points;2;точек
+sampling.vlp_points;2;точек
+sampling.q_max;200;м³/сут

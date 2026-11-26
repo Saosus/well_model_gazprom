@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <title>Well Model Builder · Сервисы</title>
+  <link rel="icon" href="data:,">
+  <link rel="stylesheet" href="style.css">
+  <script type="module" src="app.js"></script>
+</head>
+<body>
+  <header class="masthead">
+    <div class="wrap masthead-inner">
+      <div class="brand"><span class="brand-mark" aria-hidden="true"><i></i><i></i><i></i></span>Well Model Builder</div>
+      <a class="back" href="./">← К расчёту</a>
+    </div>
+  </header>
+  <main class="wrap">
+    <div class="intro">
+      <h1>Состояние системы</h1>
+      <p>Проверьте связь с сервисами и откройте их HTTP-контракты.</p>
+    </div>
+    <section aria-labelledby="components">
+      <div class="section-head">
+        <h2 id="components">Компоненты</h2>
+        <button type="button" id="refresh">Проверить связь</button>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th scope="col">Компонент</th><th scope="col">Путь проверки</th><th scope="col">Состояние</th><th scope="col">Открыть</th></tr></thead>
+          <tbody id="services"></tbody>
+        </table>
+      </div>
+      <noscript><p>Для таблицы состояния включите JavaScript.</p></noscript>
+      <p id="checked" class="check-note" role="status" aria-live="polite">Сведения о связи появятся после проверки.</p>
+    </section>
+    <section class="contract" aria-labelledby="contract-heading">
+      <div>
+        <h2 id="contract-heading">Контракт расчёта</h2>
+        <code>POST /api/calculate</code>
+        <p>В Swagger у Backend отправьте параметры скважины в POST /api/calculate. Ответ содержит кривые IPR и VLP, дебит и давление в рабочей точке.</p>
+      </div>
+      <a id="schema">Схема OpenAPI</a>
+    </section>
+  </main>
+</body>
+</html>

@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light"><title>Узловой анализ · Well Model Builder</title>
+  <link rel="icon" href="data:,"><link rel="stylesheet" href="style.css"><link rel="stylesheet" href="dashboard.css"><link rel="stylesheet" href="assistant.css">
+  <script type="module" src="dashboard.js"></script>
+</head>
+<body class="dashboard">
+  <header class="masthead"><div class="wrap masthead-inner">
+    <div class="brand"><span class="brand-mark" aria-hidden="true"><i></i><i></i><i></i></span>Well Model Builder</div>
+    <nav aria-label="Разделы"><a href="./" aria-current="page">Расчёт</a><a href="#assistant">ИИ-ассистент</a><a href="#scenarios">Сценарии</a><a href="#analysis">Отчёты</a><a href="services.html">Сервисы</a></nav>
+  </div></header>
+  <main class="wrap">
+    <div class="intro"><h1>Узловой анализ</h1><p>Модель притока и подъёма жидкости в скважине</p></div>
+    <noscript>Для расчёта включите JavaScript в браузере.</noscript>
+    <div class="workspace">
+      <form id="parameters" novalidate class="panel">
+        <div class="panel-head"><h2>Параметры модели</h2></div>
+        <details class="group" open><summary>Режим скважины</summary><div class="fields"><label>Устьевое давление<span class="field"><input type="number" step="any" name="well.p_wh" required value="10"><small>атм</small></span><span class="hint">Абсолютное давление на выходе из скважины, больше 0 атм.</span></label>
+<label>Пластовое давление<span class="field"><input type="number" step="any" name="reservoir.p_res" required value="200"><small>атм</small></span><span class="hint">Давление в пласте, больше 0 атм. Сетка IPR начинается с 1 атм.</span></label>
+<label>Обводнённость<span class="field"><input type="number" step="any" name="pvt.wct" required value="50"><small>%</small></span><span class="hint">Доля воды в поверхностном дебите жидкости, от 0 до 100 %.</span></label>
+<label>Продуктивность<span class="field"><input type="number" step="any" name="reservoir.pi" required value="1"><small>м³/(сут·атм)</small></span><span class="hint">Прирост дебита на 1 атм депрессии, от 0 м³/(сут·атм).</span></label>
+<label>Давление насыщения IPR<span class="field"><input type="number" step="any" name="reservoir.pb" required value="150"><small>атм</small></span><span class="hint">Давление начала выделения газа для IPR, от 0 атм.</span></label></div></details>
+<details class="group" ><summary>Ствол и инклинометрия</summary><div class="fields"><label>Глубина пласта по стволу<span class="field"><input type="number" step="any" name="well.h_res" required value="1500"><small>м</small></span><span class="hint">Расстояние до пласта по стволу, глубже башмака и в пределах замеров.</span></label>
+<label>Глубина спуска НКТ<span class="field"><input type="number" step="any" name="well.tubing.h_mes" required value="1000"><small>м</small></span><span class="hint">Длина участка НКТ, от 0 м до глубины пласта исключительно.</span></label>
+<label>Внутренний диаметр ЭК<span class="field"><input type="number" step="any" name="well.casing.d" required value="0.1"><small>м</small></span><span class="hint">Проходной диаметр колонны в метрах, больше диаметра НКТ.</span></label>
+<label>Внутренний диаметр НКТ<span class="field"><input type="number" step="any" name="well.tubing.d" required value="0.062"><small>м</small></span><span class="hint">Проходной диаметр трубы в метрах, больше 0 и меньше диаметра ЭК.</span></label>
+<label>Геотермический градиент<span class="field"><input type="number" step="any" name="well.geo_grad" required value="3"><small>°C/100 м</small></span><span class="hint">Изменение температуры на 100 м вертикальной глубины. Допустим любой конечный градиент.</span></label>
+<label>Относительная шероховатость<span class="field"><input type="number" step="any" name="well.roughness" required value="0.0001"><small>доля</small></span><span class="hint">Отношение высоты неровностей к диаметру трубы, больше 0.</span></label>
+<section class="wide survey" aria-labelledby="survey-title">
+<h3 id="survey-title">Инклинометрия</h3>
+<p class="help" id="survey-help">MD — длина по стволу, TVD — глубина по вертикали. Обе от устья, в метрах. MD возрастает, TVD может оставаться постоянной. Прирост TVD не превышает прирост MD.</p>
+<table><thead><tr><th>№</th><th>MD, м</th><th>TVD, м</th><th></th></tr></thead><tbody id="stations"></tbody></table>
+<button type="button" class="secondary" id="add-station">Добавить замер</button>
+</section></div></details>
+<details class="group" ><summary>Свойства флюида · PVT</summary><div class="fields"><label>Газовый фактор<span class="field"><input type="number" step="any" name="pvt.rp" required value="100"><small>ст. м³/т</small></span><span class="hint">Объём газа на тонну товарной нефти, от 0 ст. м³/т.</span></label>
+<label>Пластовая температура<span class="field"><input type="number" step="any" name="pvt.t_res" required value="90"><small>°C</small></span><span class="hint">Температура флюида у пласта, выше −273,15 °C.</span></label>
+<label>Плотность нефти по воде<span class="field"><input type="number" step="any" name="pvt.gamma_oil" required value="0.8"><small>доля</small></span><span class="hint">Плотность нефти относительно воды, больше 0.</span></label>
+<label>Плотность газа по воздуху<span class="field"><input type="number" step="any" name="pvt.gamma_gas" required value="0.7"><small>доля</small></span><span class="hint">Плотность газа относительно воздуха, больше 0.</span></label>
+<label>Относительная плотность воды<span class="field"><input type="number" step="any" name="pvt.gamma_wat" required value="1.0"><small>доля</small></span><span class="hint">Плотность пластовой воды относительно эталонной воды, больше 0.</span></label></div></details>
+<details class="group" ><summary>Сетка расчёта</summary><div class="fields"><label>Максимальный дебит VLP<span class="field"><input type="number" step="any" name="sampling.q_max" required value="400"><small>м³/сут</small></span><span class="hint">Верхняя граница сетки дебита жидкости, больше 0 м³/сут.</span></label>
+<label>Число точек IPR<span class="field"><input type="number" step="any" name="sampling.ipr_points" required value="21"><small>шт.</small></span><span class="hint">Размер сетки забойного давления, целое число от 2 до 201.</span></label>
+<label>Число точек VLP<span class="field"><input type="number" step="any" name="sampling.vlp_points" required value="21"><small>шт.</small></span><span class="hint">Размер сетки дебита жидкости, целое число от 2 до 201.</span></label></div></details>
+        <p id="validation-summary" role="status" hidden></p><div class="actions"><button type="submit" id="calculate">Рассчитать</button><button type="reset" class="secondary">Вернуть пример</button></div>
+      </form>
+      <section class="panel result" aria-labelledby="chart-heading">
+        <div class="panel-head"><h2 id="chart-heading">Кривые IPR и VLP</h2></div>
+        <div class="legend"><span class="ipr-key">IPR · приток</span><span class="vlp-key">VLP · подъём</span><span class="point-key">Рабочая точка</span></div>
+        <div id="plot"><svg id="chart" role="img" aria-label="Кривые притока и подъёма жидкости с рабочей точкой" hidden></svg>
+          <p id="empty">Запустите расчёт для построения графика.</p></div>
+        <div class="metrics"><div><h3>Дебит жидкости</h3><strong id="flow">—</strong> <span>м³/сут</span></div>
+          <div><h3>Забойное давление</h3><strong id="pressure">—</strong> <span>атм</span></div></div>
+        <div class="actions"><button id="report-html" type="button" class="secondary" disabled>HTML-отчёт / печать PDF</button><button id="report-md" type="button" class="secondary" disabled>Markdown</button></div><p id="status" role="status" aria-live="polite">Загружены параметры примера.</p>
+      </section>
+      <section class="panel assistant" id="assistant" aria-labelledby="assistant-title">
+        <div class="assistant-head">
+          <div class="assistant-brand"><span class="assistant-mark" aria-hidden="true">✦</span><div><h2 id="assistant-title">Well AI</h2><p>Инженерный ассистент</p></div></div>
+          <button type="button" class="assistant-icon secondary" id="chat-new" title="Новый диалог" aria-label="Новый диалог">＋</button>
+        </div>
+        <div class="assistant-connection"><span id="chat-status" role="status">Проверяем настройки…</span><button id="chat-retry" type="button" class="assistant-link">Проверить</button></div>
+        <div class="assistant-messages" id="chat-messages" role="log" aria-label="История диалога" aria-live="polite" tabindex="0"></div>
+        <div class="assistant-controls">
+          <p id="chat-context" class="assistant-note">Чат начинает с пустых данных. Передайте параметры формы или опишите скважину.</p>
+          <div class="assistant-quick"><button class="secondary" type="button" id="chat-use-form">↗ Рассчитать по форме</button><button class="secondary" type="button" id="chat-defaults" hidden>Согласовать значения по умолчанию</button><button class="secondary" type="button" id="chat-continue" hidden>Продолжить по данным чата</button></div>
+          <div class="assistant-files" id="chat-files-panel">
+            <label class="assistant-file-label" for="chat-files">Прикрепить данные скважины</label>
+            <input id="chat-files" type="file" multiple accept=".txt,.csv,.xlsx,.docx,.pdf,.json">
+            <small>До 3 файлов, суммарно 5 МБ. TXT/PDF: «параметр: значение единица»; таблицы: параметр, значение, единица.</small>
+            <button class="secondary" id="chat-file-preview" type="button">Извлечь параметры</button>
+            <div id="chat-file-result" hidden></div>
+          </div>
+          <form id="chat-form"><label class="sr-only" for="chat-input">Сообщение ассистенту</label><textarea id="chat-input" rows="3" maxlength="50000" placeholder="Задайте вопрос, опишите скважину или вставьте JSON…"></textarea><div class="assistant-send-row"><small>Enter — отправить · Shift+Enter — строка</small><button id="chat-stop" type="button" class="secondary" hidden>Стоп</button><button id="chat-send" type="submit">Отправить ↑</button></div></form>
+          <p class="assistant-note">Числа поступают из IPR, VLP и Nodal. После базового расчёта в чате попробуйте: «Что если устьевое давление 15 атм?»</p>
+        </div>
+      </section>
+    </div>
+    <section class="panel scenario-panel" id="scenarios" aria-labelledby="scenarios-title">
+      <div class="panel-head"><h2 id="scenarios-title">Сценарии «Что если?» и подбор параметров</h2><p class="help">Базовый режим — текущая форма. Изменяется один параметр; остальные остаются неизменными. Исходная форма не меняется.</p></div>
+      <form id="scenario-form" class="scenario-controls">
+        <label>Параметр<select id="scenario-param"></select></label>
+        <label>Задача<select id="scenario-objective"><option value="compare">Сравнение режимов</option><option value="max_flow">Максимум дебита</option><option value="min_pressure">Минимум забойного давления</option></select></label>
+        <label>От <span class="scenario-unit"></span><input id="scenario-min" type="number" step="any" required></label>
+        <label>До <span class="scenario-unit"></span><input id="scenario-max" type="number" step="any" required></label>
+        <label>Число вариантов (1–8)<input id="scenario-count" type="number" min="1" max="8" step="1" value="5" required></label>
+        <button id="scenario-run">Выполнить серию</button>
+      </form>
+      <p class="scenario-status" id="scenario-status" role="status" aria-live="polite">Укажите границы или одно значение (от = до, число вариантов = 1).</p>
+      <div id="scenario-results" hidden><div class="scenario-table-wrap"><table><thead><tr><th>Режим</th><th>Параметр</th><th>Дебит, м³/сут</th><th>Давление, атм</th><th>Δ дебита</th><th>Δ давления</th><th>Статус</th><th>График</th></tr></thead><tbody id="scenario-rows"></tbody></table></div><div class="scenario-plot-head"><h3 id="scenario-chart-title">График выбранного режима</h3><button id="scenario-apply" type="button" class="secondary">Перенести выбранный режим в форму</button></div><div class="legend"><span class="ipr-key">IPR выбранного режима</span><span class="vlp-key">VLP выбранного режима</span><span class="point-key">Рабочая точка</span> · Полупрозрачные пунктирные линии и полый маркер — базовый режим, если он рассчитан.</div><div class="scenario-plot"><svg id="scenario-chart" role="img" aria-label="IPR и VLP выбранного режима"></svg></div></div>
+    </section>
+    <section class="panel scenario-panel" id="analysis" aria-labelledby="analysis-title">
+      <div class="panel-head"><h2 id="analysis-title">Отчёты и пакетный анализ</h2><p class="help">Добавьте снимки текущей формы или загрузите JSON с несколькими скважинами. Фактические значения — отдельные замеры в тех же единицах и условиях.</p></div>
+      <div class="scenario-controls analysis-controls">
+        <label>Название скважины<input id="analysis-name" maxlength="120" placeholder="Скважина 1"></label>
+        <label>Фактический дебит, м³/сут<input id="analysis-q" type="number" min="0" step="any" placeholder="Необязательно"></label>
+        <label>Фактическое забойное давление, атм<input id="analysis-p" type="number" min="0" step="any" placeholder="Необязательно"></label>
+        <button id="analysis-add" type="button">Добавить текущую форму</button>
+        <label>Пакет JSON (до 8 скважин)<input id="analysis-file" type="file" accept=".json,application/json"></label><button id="analysis-load" type="button" class="secondary">Загрузить список</button>
+        <a href="examples/batch.json" download>Шаблон пакета JSON</a>
+      </div>
+      <div class="scenario-table-wrap"><table><thead><tr><th>Скважина</th><th>PI</th><th>Q факт.</th><th>P факт.</th><th></th></tr></thead><tbody id="analysis-cases"></tbody></table></div>
+      <div class="scenario-controls analysis-controls"><label>Порог отклонения, %<input id="analysis-threshold" type="number" min="0" step="any" value="10"></label><button id="analysis-run" type="button">Рассчитать пакет</button><button id="analysis-clear" type="button" class="secondary">Очистить список</button></div>
+      <div class="panel-head"><h3>Подбор PI по фактическому дебиту текущей скважины</h3><p class="help">Введите фактический дебит выше. Исходные параметры не меняются. Лучший вариант — минимум |ΔQ| среди проверенных значений.</p></div>
+      <div class="scenario-controls analysis-controls"><label>PI от<input id="analysis-pi-min" type="number" min="0" step="any" value="0.5"></label><label>PI до<input id="analysis-pi-max" type="number" min="0" step="any" value="2"></label><label>Вариантов (2–8)<input id="analysis-count" type="number" min="2" max="8" step="1" value="5"></label><button id="analysis-calibrate" type="button">Подобрать PI</button></div>
+      <p id="analysis-status" class="scenario-status" role="status">Добавьте скважины или укажите замер для подбора PI.</p>
+      <div id="analysis-results" hidden><div class="actions"><button id="analysis-export-html" type="button">HTML-отчёт / печать PDF</button><button id="analysis-export-md" type="button" class="secondary">Markdown</button><button id="analysis-export-csv" type="button" class="secondary">CSV</button></div><div class="scenario-table-wrap"><table><thead><tr><th>Скважина</th><th>PI</th><th>Q расч.</th><th>P расч.</th><th>Q факт.</th><th>P факт.</th><th>ΔQ</th><th>ΔQ, %</th><th>ΔP</th><th>ΔP, %</th><th>Статус</th><th></th></tr></thead><tbody id="analysis-rows"></tbody></table></div><div class="scenario-plot-head"><h3 id="analysis-chart-title">Детали</h3><button id="analysis-apply" class="secondary" type="button">Перенести в форму</button></div><p class="scenario-status" id="analysis-notes"></p><div class="scenario-plot"><svg id="analysis-chart" role="img" aria-label="Кривые выбранной скважины"></svg></div></div>
+    </section>
+  </main>
+</body></html>

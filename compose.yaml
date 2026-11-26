@@ -1,0 +1,59 @@
+name: well-model-builder
+
+x-api: &api
+  build:
+    context: .
+    target: api
+
+services:
+  ipr:
+    <<: *api
+    command: ["python", "-m", "uvicorn", "services.ipr.main:app", "--host", "0.0.0.0", "--port", "8003"]
+    environment:
+      HEALTH_URL: http://127.0.0.1:8003/ipr/health
+
+  vlp:
+    <<: *api
+    command: ["python", "-m", "uvicorn", "services.vlp.main:app", "--host", "0.0.0.0", "--port", "8002"]
+    environment:
+      HEALTH_URL: http://127.0.0.1:8002/vlp/health
+
+  nodal:
+    <<: *api
+    command: ["python", "-m", "uvicorn", "services.nodal.main:app", "--host", "0.0.0.0", "--port", "8004"]
+    environment:
+      HEALTH_URL: http://127.0.0.1:8004/nodal/health
+
+  backend:
+    <<: *api
+    command: ["python", "-m", "uvicorn", "services.backend.main:app", "--host", "0.0.0.0", "--port", "8080"]
+    environment:
+      HEALTH_URL: http://127.0.0.1:8080/health
+      IPR_URL: ${IPR_URL:-http://ipr:8003}
+      VLP_URL: ${VLP_URL:-http://vlp:8002}
+      NODAL_URL: ${NODAL_URL:-http://nodal:8004}
+      FRONTEND_ORIGINS: ${FRONTEND_ORIGINS:-http://localhost:3000,http://127.0.0.1:3000,http://[::1]:3000}
+      LLM_BASE_URL: ${LLM_BASE_URL:-}
+      LLM_MODEL: ${LLM_MODEL:-}
+      LLM_API_KEY: ${LLM_API_KEY:-}
+      LLM_TIMEOUT: ${LLM_TIMEOUT:-30}
+      LLM_MAX_TOOL_STEPS: ${LLM_MAX_TOOL_STEPS:-6}
+    depends_on:
+      ipr: {condition: service_healthy}
+      vlp: {condition: service_healthy}
+      nodal: {condition: service_healthy}
+
+  nginx:
+    networks:
+      default:
+        aliases: [well-model-gateway]
+    build:
+      context: .
+      target: nginx
+    depends_on:
+      backend: {condition: service_healthy}
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1/"]
+      interval: 5s
+      timeout: 3s
+      retries: 10

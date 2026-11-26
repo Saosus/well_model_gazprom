@@ -1,0 +1,5 @@
+# При обычном запуске публикуется только HTTP-вход Nginx.
+services:
+  nginx:
+    ports:
+      - "${NGINX_PORT:-80}:80"
